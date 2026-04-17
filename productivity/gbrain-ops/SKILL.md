@@ -9,10 +9,20 @@ description: GBrain 个人知识库操作手册。涵盖 gbrain put 必须通过
 
 所有命令使用：`bun run ~/gbrain/src/cli.ts <cmd>`
 
-**禁止使用** compiled binary `~/gbrain/bin/gbrain` — 有 bunfs bug，会报 ENOENT。
+**推荐使用** compiled binary `/home/lxgxdx/gbrain/bin/gbrain` — 在 cron/root 环境下正常运行。`bun run src/cli.ts` 在 cron 环境中可能有路径问题。
 
----
+### 正确环境变量
+```bash
+HOME=/home/lxgxdx
+SILICONFLOW_API_KEY=sk-kum...jmew  # SiliconFlow embedding key
+PATH="/home/lxgxdx/.bun/bin:$PATH"
+```
 
+### 正确命令
+```bash
+/home/lxgxdx/gbrain/bin/gbrain doctor --fast
+/home/lxgxdx/gbrain/bin/gbrain put <slug> --content '...'   # 推荐 --content flag
+```
 ## gbrain put — 关键：必须通过 stdin
 
 `gbrain put` 要求内容通过 stdin 传入。直接写文件到 brain 目录不会创建 embeddings（0 chunks）。
@@ -59,9 +69,15 @@ BRAIN_DIR / (slug.replace('/', os.sep) + '.md')
 
 ### put 也做 embedding！
 
-`gbrain put <slug>` 会自动对内容做 embedding（写入向量数据库）。如果环境里没有配置 `OPENAI_API_KEY`（或硅基流动的 key 未被识别），embedding 会静默失败（exit 0 但 chunks=1 且无向量）。
+`gbrain put <slug>` 会自动对内容做 embedding（写入向量数据库）。如果 embedding 失败（401 或维度不匹配），内容仍会写入数据库，但向量为空。
 
-当前配置：硅基流动的 `SILICONFLOW_API_KEY` 可以用于 `query`，但 `put` 的 embedding 仍然尝试用 OpenAI，导致 embedding failed 警告。解决方案：用 `embed <slug>` 命令事后手动触发 embedding，或确保 `OPENAI_API_KEY` 被正确传递。
+维度不匹配症状：`expected 1536 dimensions, not 1024` — SiliconFlow 使用了 text-embedding-3-small (1024维) 而非 GBrain 期望的 text-embedding-3-large (1536维)。
+
+**当前环境**: `SILICONFLOW_API_KEY` 配置了 SiliconFlow，可用于 embedding，但模型可能不匹配。
+
+解决方案：
+1. 检查 SiliconFlow API 端点的模型配置，确保使用 `text-embedding-3-large`
+2. 或用 `embed <slug>` 命令事后手动触发 embedding
 
 ---
 
@@ -92,7 +108,18 @@ BRAIN_DIR / (slug.replace('/', os.sep) + '.md')
 
 ---
 
-## doctor 健康检查
+## PGLite 数据库路径
+
+`~/.gbrain/config.json` 配置了 `database_path: /home/lxgxdx/.gbrain/brain.pglite`
+
+### PGLite 锁文件问题
+`brain.pglite/` 目录下可能存在 `.gbrain-lock/` 子目录，表示有未释放的锁。如果 `gbrain put` 命令超时且 `doctor` 显示 "No database configured"，可能是锁未释放。
+
+解决方法：检查并清理 `.gbrain-lock/` 目录（确保没有其他 gbrain 进程在运行）
+
+### doctor 显示 "No database configured" 但配置文件存在
+原因：compiled binary 运行时 HOME 环境变量可能不是 `/home/lxgxdx`，导致找不到 `~/.gbrain/config.json`。
+解决：`HOME=/home/lxgxdx /home/lxgxdx/gbrain/bin/gbrain doctor --fast`
 
 ```bash
 bun run ~/gbrain/src/cli.ts doctor --fast   # 快速检查（推荐日常用）
@@ -139,10 +166,11 @@ echo "Done"
 
 | 问题 | 原因 | 解决 |
 |------|------|------|
-| compiled binary ENOENT | bunfs bug | 用 `bun run src/cli.ts` |
+| compiled binary 报 ENOENT | bunfs bug 或 HOME 环境变量问题 | 确认 HOME=/home/lxgxdx 在 cron 环境中正确设置 |
 | 0 chunks embedded | 直接写文件没走 stdin | 用 `gbrain put slug --content '...'` |
 | query 返回空 | 向量兼容性问题 | 用 `search` 代替 |
 | subprocess input=bytes 报错 | 要求 str | `input=content` 而非 `.encode()` |
 | `list` 显示的页面文件系统里没有 | 数据库和文件系统独立 | 用 `get <slug>` 从数据库读，不从文件读 |
 | `gbrain put` 后文件系统没变化 | 正常现象 | 内容在数据库，不在文件系统 |
-| put/embed/doctor 超时 | embedding 401 后hang | 后台运行+8秒kill |
+| put embedding 失败 (expected 1536 dimensions, not 1024) | SiliconFlow 返回 1024维，但 GBrain 期望 text-embedding-3-large 的 1536维 | 检查 SiliconFlow API embedding 模型配置，或用 `gbrain put` 忽略警告手动记录内容 |
+| put/embed 超时 | embedding 401 后hang | 后台运行+8秒kill |
