@@ -1,7 +1,7 @@
 ---
 name: unraid-p4-ocr-deploy
 description: Unraid Tesla P4 上部署 OCR 服务供 Hermes 调用
-version: 2026-04-18
+version: 2026-04-19
 status: implemented
 ---
 
@@ -72,63 +72,33 @@ docker run -d \
   paddleocr-gpu:latest
 ```
 
-### 关于 `/tmp/ocr/` 文件用途
+### 镜像选型结论（重要更正）
 
-`/tmp/ocr/` 下的文件（docker-compose.yml、Dockerfile、ocr_api.py）是**设计参考**，用于：
-1. 确认容器配置（环境变量、端口、GPU、内存限制）
-2. 供 CA 模板开发者参照填写 UI 字段
-3. 备用：如有特殊需求需完全手动构建镜像
+**`paddlepaddle/paddleocr-gpu` 不存在！** 这是本次排查最重要的教训。
 
-### 技术细节
-- 基础镜像：`nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04`
-- OCR 框架：PaddleOCR GPU (`paddlepaddle-gpu==2.6.0`, `paddleocr==2.7.3`)
-- API 框架：FastAPI + Uvicorn
-- 共享内存：`shm_size: 4gb`（大图处理需要）
+Docker Hub 上有两个容易混淆的仓库：
+- `paddlepaddle/paddle` — PaddlePaddle 框架本体（无 OCR），GPU 版 12GB+
+- `paddlecloud/paddleocr` — **预装了 PaddleOCR 的完整镜像** ✅
 
-### P4 显存调优（关键）
-Tesla P4 有 **8GB** 显存（不是4GB），OCR 占用约 2GB，可留足显存给 Emby 硬解：
+**正确镜像：`paddlecloud/paddleocr:2.6-gpu-cuda11.2-cudnn8-latest`**
+- 体积：~6GB
+- 预装 PaddleOCR，无需本地 build
+- CUDA 11.2 + cuDNN 8，完美支持 Pascal 架构（P4 CC 6.1）
+- 最后拉取时间：2026-04-19（说明镜像活跃可用）
 
-```python
-_ocr_engine = PaddleOCR(
-    use_angle_cls=True,
-    lang="ch",
-    use_gpu=True,
-    show_log=False,
-    rec_batch_num=4,
-    max_batch_size=4,
-    det_limit_side_len=1920,
-)
+### 凌晨部署步骤（极简版，只需一条命令）
+
+```bash
+# 凌晨 2:00-5:00 执行
+docker pull paddlecloud/paddleocr:2.6-gpu-cuda11.2-cudnn8-latest
 ```
 
-Docker Compose 内存限制：
+然后更新 `/mnt/user/appdata/ocr/docker-compose.yml`：
+
 ```yaml
-limits:
-  memory: 2G  # 2GB 足够PaddleOCR运行，留显存给Emby
-```
-
-显存占用估算（8GB P4）：
-- PaddleOCR 峰值：~2GB
-- Emby 硬解（1080p）：~1-2GB
-- Emby 硬解（4K）：~2-3GB
-- 总计可同时跑满 8GB
-
-### Unraid Docker Compose WebUI 部署（推荐方式）
-
-Unraid Docker 页面有一个 **Compose** 标签页（第三方插件提供），通过它可以用 Docker Compose 部署：
-
-**Stack Settings：**
-- Stack name: `paddle-ocr`
-
-**Compose File：**
-```yaml
-version: "3.8"
-
 services:
   ocr_gpu:
-    build:
-      context: /mnt/user/appdata/ocr
-      dockerfile: Dockerfile
-    image: paddleocr-gpu:latest
+    image: paddlecloud/paddleocr:2.6-gpu-cuda11.2-cudnn8-latest
     container_name: paddle_ocr_gpu
     restart: unless-stopped
     ports:
@@ -136,8 +106,6 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - CUDA_VISIBLE_DEVICES=0
-    networks:
-      - dockernetwork
     deploy:
       resources:
         reservations:
@@ -146,60 +114,45 @@ services:
               count: 1
               capabilities: [gpu]
         limits:
-          memory: 2G
+          memory: 4G
     shm_size: 4gb
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8008/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
+    volumes:
+      - ./models:/root/.paddleocr
 
 networks:
-  dockernetwork:
-    external: true
+  default:
+    name: ocr_net
 ```
 
-**Env File：** 留空
+**不需要 Dockerfile，不需要 build，直接用预装镜像。**
 
-**UI Labels：**
-```yaml
-labels:
-  com.docker.compose.project: "paddle-ocr"
-  org.opencontainers.image.title: "PaddleOCR GPU"
-  org.opencontainers.image.description: "PaddleOCR GPU OCR Service"
+### 验证
+```bash
+curl http://localhost:8008/health
+# 应返回：{"status":"ok"}
 ```
 
-**前提条件：**
-- 文件（Dockerfile、ocr_api.py）需上传到 `/mnt/user/appdata/ocr`
-- 确认 `dockernetwork` 网络已存在（`docker network ls` 可查）
-
-### 关于 `/tmp/ocr/` 文件用途
-
-`/tmp/ocr/` 下的文件（docker-compose.yml、Dockerfile、ocr_api.py）是**设计参考**，用于：
-1. 确认容器配置（环境变量、端口、GPU、内存限制）
-2. 供 CA 模板开发者参照填写 UI 字段
-3. 备用：如有特殊需求需完全手动构建镜像
-
-### 技术细节
-- 基础镜像：`nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04`
-- OCR 框架：PaddleOCR GPU (`paddlepaddle-gpu==2.6.0`, `paddleocr==2.7.3`)
-- API 框架：FastAPI + Uvicorn
-- 共享内存：`shm_size: 4gb`（大图处理需要）
-
-### 关键认知纠正
-- **Unraid 有 Docker Compose WebUI** — Docker 页面 → Compose 标签页（第三方插件）
-- 通过 WebUI 编辑 compose file、env file、ui labels、stack settings 来部署
-- 网络使用 `external: true` 声明已存在的网络（如 `dockernetwork`）
-- 提交 CA 模板需要：准备模板文件 → 论坛发帖 → 官方表单提交 → 审核（约48小时）
-- 普通用户直接在 Docker UI 填写配置更实用
+### 常用镜像源测试结果（2026-04-19）
+| 镜像源 | 状态 | 备注 |
+|--------|------|------|
+| `paddlecloud/paddleocr:2.6-gpu-cuda11.2-cudnn8-latest` | ✅ 存在，~6GB | 预装 OCR，直接用 |
+| `paddlepaddle/paddleocr-gpu` | ❌ 不存在 | 误以为是官方镜像 |
+| `paddlepaddle/paddle` (GPU版) | ⚠️ 12.8GB太大 | 国内网络难拉 |
+| `nvidia/cuda:11.7.1-cudnn8-runtime-ubuntu22.04` | ⚠️ 可拉但慢 | 需本地 build |
 
 ### 注意事项
-- Docker Hub 访问受限，无法直接拉取第三方预构建镜像，必须用 Dockerfile 自建镜像
+- `version: "3.8"` 已废弃，docker-compose.yml 顶层不要加 version
+- Docker Hub 访问可能受限，如拉取失败需要本地构建镜像
 - 如果 CUDA 版本不匹配，换 `nvidia/cuda:12.x` 基础镜像
 - 服务端口默认 `8008`，对应容器内端口 8008
 - 一直运行会占用 P4 显存约 1.5-2GB（无法动态释放，除非停容器）
 - 容器 GPU 显存限制靠 `nvidia-container-toolkit` + `CUDA_VISIBLE_DEVICES` 实现
+
+### 部署步骤优先级
+
+1. **先试镜像加速器**（配置 `/etc/docker/daemon.json`）——最简单
+2. **再试本地构建**（手动 `docker build`）——完全离线
+3. **最后用 Docker UI 手动创建**——最通用
 
 ### 关键认知纠正
 - **Unraid 不是用 `docker compose` 部署的** — 这是传统 Linux Docker 概念
@@ -208,7 +161,8 @@ labels:
 - 普通用户直接在 Docker UI 填写配置更实用
 
 ### 注意事项
-- Docker Hub 访问受限，无法直接拉取第三方预构建镜像，必须用 Dockerfile 自建镜像
+- `version: "3.8"` 已废弃，docker-compose.yml 顶层不要加 version
+- Docker Hub 访问可能受限，如拉取失败需要本地构建镜像
 - 如果 CUDA 版本不匹配，换 `nvidia/cuda:12.x` 基础镜像
 - 服务端口默认 `8008`，对应容器内端口 8008
 - 一直运行会占用 P4 显存约 1.5-2GB（无法动态释放，除非停容器）
