@@ -29,7 +29,7 @@ dependency:
      - 调用脚本将PDF文件的每一页转换为图片
      - 命令示例：
        ```bash
-       python scripts/convert_pdf_to_images.py \
+       python /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py \
          --input ./document.pdf \
          --output-dir ./images
        ```
@@ -45,7 +45,7 @@ dependency:
      - 可选择是否生成ZIP压缩包
 
 ## 资源索引
-- 必要脚本：见 [scripts/convert_pdf_to_images.py](scripts/convert_pdf_to_images.py)(用途与参数：PDF转图片脚本)
+- 必要脚本：见 [/home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py](/home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py)(用途与参数：PDF转图片脚本)
 
 ## 注意事项
 - 输入PDF文件必须存在且可读
@@ -54,7 +54,7 @@ dependency:
 - 大型PDF文件转换可能需要较长时间，请耐心等待
 
 ## 故障排查
-- **脚本找不到错误**：确保在Skill目录下执行，或使用相对路径 `scripts/xxx.py`
+- **脚本找不到错误**：确保在Skill目录下执行，或使用相对路径 `/home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/xxx.py`
 - **Python版本问题**：确保使用Python 3.6或更高版本
 - **依赖缺失**：执行 `pip install pymupdf>=1.23.0` 安装依赖
 - **页数超限错误**：PDF文件超过100页，请使用PDF工具拆分为多个小文件
@@ -63,14 +63,14 @@ dependency:
 
 ### 示例1：基本转换（PNG格式）
 ```bash
-python scripts/convert_pdf_to_images.py \
+python /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py \
   --input ./report.pdf \
   --output-dir ./images
 ```
 
 ### 示例2：使用JPG格式
 ```bash
-python scripts/convert_pdf_to_images.py \
+python /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py \
   --input ./document.pdf \
   --output-dir ./images \
   --image-format jpg
@@ -78,7 +78,7 @@ python scripts/convert_pdf_to_images.py \
 
 ### 示例3：高分辨率输出
 ```bash
-python scripts/convert_pdf_to_images.py \
+python /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py \
   --input ./document.pdf \
   --output-dir ./images \
   --dpi 300
@@ -86,7 +86,7 @@ python scripts/convert_pdf_to_images.py \
 
 ### 示例4：生成ZIP压缩包
 ```bash
-python scripts/convert_pdf_to_images.py \
+python /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py \
   --input ./document.pdf \
   --output-dir ./images \
   --zip \
@@ -95,7 +95,7 @@ python scripts/convert_pdf_to_images.py \
 
 ### 示例5：完整配置
 ```bash
-python scripts/convert_pdf_to_images.py \
+python /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-to-image-preview/scripts/convert_pdf_to_images.py \
   --input ./report.pdf \
   --output-dir ./images \
   --image-format jpg \

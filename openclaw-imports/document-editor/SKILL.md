@@ -159,10 +159,10 @@ editor.save("工资表.xlsx")
 
 ```bash
 # Word文档操作
-python3 ~/.openclaw/skills/document-editor/editor.py word -t '标题' -c '内容' -o output.docx
+python3 /home/lxgxdx/.hermes/skills/openclaw-imports/document-editor/editor.py word -t '标题' -c '内容' -o output.docx
 
 # Excel文档操作
-python3 ~/.openclaw/skills/document-editor/editor.py excel -d '姓名,年龄,城市' -o output.xlsx
+python3 /home/lxgxdx/.hermes/skills/openclaw-imports/document-editor/editor.py excel -d '姓名,年龄,城市' -o output.xlsx
 ```
 
 ## 高级功能

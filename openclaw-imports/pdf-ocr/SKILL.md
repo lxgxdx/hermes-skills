@@ -19,13 +19,13 @@ pip install pymupdf python-docx pillow
 ## 使用方法
 
 ```bash
-python3 {baseDir}/scripts/pdf_to_docx.py <PDF路径> [输出目录]
+python3 /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-ocr/scripts/pdf_to_docx.py <PDF路径> [输出目录]
 ```
 
 输出文件在 `[输出目录]/xxx_全文_ocr.docx`，文件较大时用脚本压缩图片：
 
 ```bash
-python3 {baseDir}/scripts/compress_docx.py <docx路径> <输出路径>
+python3 /home/lxgxdx/.hermes/skills/openclaw-imports/pdf-ocr/scripts/compress_docx.py <docx路径> <输出路径>
 ```
 
 ## 处理策略

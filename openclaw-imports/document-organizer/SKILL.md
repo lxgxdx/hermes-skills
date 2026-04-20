@@ -45,13 +45,13 @@ metadata:
 ### 命令行使用
 ```bash
 # 整理U盘文件夹
-python3 ~/.openclaw/skills/document-organizer/organize.py /media/usb
+python3 /home/lxgxdx/.hermes/skills/openclaw-imports/document-organizer/organize.py /media/usb
 
 # 整理桌面文档
-python3 ~/.openclaw/skills/document-organizer/organize.py ~/Desktop
+python3 /home/lxgxdx/.hermes/skills/openclaw-imports/document-organizer/organize.py ~/Desktop
 
 # 整理指定文件夹
-python3 ~/.openclaw/skills/document-organizer/organize.py /path/to/folder
+python3 /home/lxgxdx/.hermes/skills/openclaw-imports/document-organizer/organize.py /path/to/folder
 ```
 
 ### 工作流程
