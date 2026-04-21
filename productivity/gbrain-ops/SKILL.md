@@ -565,6 +565,7 @@ docker exec pgvector-17 psql -U lxgxdx -d gbrain -c "CREATE DATABASE gbrain;"
 5. **导入超时但部分数据已导入**：
    - 原因：embedding 生成耗时，特别是 Infinity 服务慢时
    - 解决：再次运行 `import` 命令，会跳过已导入的页面
+   - **性能参考**：Tesla P4 单条 Infinity embedding 约 56ms，批量（10条）约 75ms。详见 `infinity-unraid-deploy` skill。
 
 **验证 PostgreSQL 连接的正确方式**：
 ```bash

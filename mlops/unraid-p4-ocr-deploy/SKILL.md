@@ -2,7 +2,7 @@
 name: unraid-p4-ocr-deploy
 description: Unraid Tesla P4 上部署 OCR 服务供 Hermes 调用
 version: 2026-04-19
-status: implemented
+status: in_progress
 ---
 
 # Unraid P4 OCR 部署
@@ -86,12 +86,46 @@ Docker Hub 上有两个容易混淆的仓库：
 - CUDA 11.2 + cuDNN 8，完美支持 Pascal 架构（P4 CC 6.1）
 - 最后拉取时间：2026-04-19（说明镜像活跃可用）
 
+### 重要更新（2026-04-21）
+
+**关键发现：PaddleOCR 显存需求比预期高，EasyOCR 反而更轻量。**
+
+#### EasyOCR vs PaddleOCR 对比
+
+| | EasyOCR | PaddleOCR PP-OCRv4 |
+|---|---|---|
+| 中英文显存需求 | ~500MB | 轻量版 0.8-1.5GB，标准 1.5-2.5GB |
+| GPU 兼容性 | 需自建镜像（新PyTorch） | CUDA 12要求，Pascal P4 有兼容问题 |
+| Docker 镜像状态 | ❌ 5年未更新（challisa/easyocr） | ✅ 官方维护（paddlecloud/paddleocr） |
+| 中文识别 | ✅ 好 | ✅ 更好 |
+
+**结论：EasyOCR 显存需求更低，但镜像老旧需自建；PaddleOCR 镜像好但显存占用大+Pascal兼容差。**
+
+#### EasyOCR 自建镜像方案
+
+```dockerfile
+FROM pytorch/pytorch:2.0.1-cuda11.7-cudnn8-runtime
+RUN apt-get update && apt-get install -y libglib2.0-0 libsm6 libxext6 libxrender-dev libgl1-mesa-dev
+RUN pip install easyocr
+# 注意：pytorch/pytorch:2.0.1 对 Pascal 兼容
+```
+
 ### 凌晨部署步骤（极简版，只需一条命令）
 
 ```bash
 # 凌晨 2:00-5:00 执行
 docker pull paddlecloud/paddleocr:2.6-gpu-cuda11.2-cudnn8-latest
 ```
+
+### VRAM 预留（与 Infinity 共存）
+
+P4 总显存 6-7GB，Infinity 占用约 53-54%（~3.5GB），剩余 ~3GB：
+
+- **EasyOCR GPU**：✅ 可用（~500MB）
+- **PaddleOCR 轻量版**：⚠️ 勉强（0.8-1.5GB）
+- **PaddleOCR 标准版**：❌ 不够（1.5-2.5GB）
+
+**推荐：EasyOCR CPU 模式**（速度慢但稳定，显存可全留给 Infinity）
 
 然后更新 `/mnt/user/appdata/ocr/docker-compose.yml`：
 
