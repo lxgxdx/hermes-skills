@@ -1,3 +1,3 @@
 ---
-description: Skills for academic research, paper discovery, literature review, domain reconnaissance, market data, content monitoring, and scientific knowledge retrieval.
+description: ML research frameworks for building and optimizing AI systems with declarative programming.
 ---

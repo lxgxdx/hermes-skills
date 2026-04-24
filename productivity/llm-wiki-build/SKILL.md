@@ -47,6 +47,22 @@ mkdir -p ~/wiki/{raw/{articles,papers,transcripts,assets},entities,concepts,comp
 <内容>
 ```
 
+**多文档拆分技巧**：汇编类文档（如政策文件汇编）可能含多个独立文件。
+1. 用 `python-docx` 读取所有段落，标记各文档标题所在段落索引
+2. 根据索引范围切分，保存为独立文件
+3. 切分后再并行派发 subagent 创建各 entity 页面
+
+```python
+# 示例：定位多文档起止位置
+from docx import Document
+doc = Document('doc.docx')
+paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+# 找各文档标题段落索引
+for i, para in enumerate(paragraphs):
+    if '条例名称' in para:
+        print(f'[{i}] {para[:60]}')
+```
+
 ### 4. Wiki 页面类型规范
 
 **Entity 页面**（实体，如硬件产品、服务）：
