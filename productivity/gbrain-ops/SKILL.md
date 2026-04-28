@@ -13,25 +13,24 @@ description: GBrain 个人知识库操作手册。涵盖 gbrain put 必须通过
 
 ### Cron/非交互环境下的正确调用方式
 
-当 cron 或脚本中运行 gbrain 时，PATH 中可能没有 bun，导致 `#!/usr/bin/env bun` 失效。**两种方案：**
+当 cron 或脚本中运行 gbrain 时，PATH 中可能没有 bun。**优先级顺序：**
 
-**方案A（推荐）**：直接用 bun 运行 cli.ts
+**方案A（最可靠）**：compiled binary `~/gbrain/bin/gbrain`
 ```bash
-/home/lxgxdx/.bun/bin/bun run /home/lxgxdx/gbrain/src/cli.ts query "..."
-/home/lxgxdx/.bun/bin/bun run /home/lxgxdx/gbrain/src/cli.ts doctor --fast
+~/gbrain/bin/gbrain doctor --json
+~/gbrain/bin/gbrain embed --stale
+~/gbrain/bin/gbrain stats
+# 注意：compiled binary 在某些环境报 bunfs bug，但2026-04-29 cron实测成功连接数据库
 ```
 
-**方案B**：用 bun 运行 compiled script（绕过 env 查找）
+**方案B**：`~/.bun/bin/bun run ~/gbrain/src/cli.ts`
 ```bash
-/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain query "..."
-/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain doctor --fast
+~/.bun/bin/bun run ~/gbrain/src/cli.ts doctor --json
+~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale
+# 注意：某些 cron 环境中 ~/.bun/bin/bun 不存在（PATH 中无 bun）
 ```
-（`~/.bun/bin/gbrain` 的 shebang 是 `#!/usr/bin/env bun`，所以需要 `bun` 直接解释执行）
 
-**方案C**：compiled binary 仅用于 `doctor --fast`（不需要数据库时可用）
-```bash
-/home/lxgxdx/gbrain/bin/gbrain doctor --fast
-```
+**2026-04-29 实测**：cron 环境下 `~/.bun/bin/bun` 不存在，但 `~/gbrain/bin/gbrain` doctor/embed 均成功，说明 compiled binary 的 bunfs bug 已在某些环境修复。
 
 ### 正确环境变量（cron/非交互shell专用）
 ```bash
@@ -586,7 +585,7 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 
 ## 已知问题速查
 |------|------|------|
-| compiled binary 报 ENOENT | bunfs bug 或 HOME 环境变量问题 | 使用 `~/.bun/bin/bun run ~/gbrain/src/cli.ts` 而非 compiled binary |
+| compiled binary 报 ENOENT (bunfs bug) | 仅限某些环境 | 2026-04-29 cron 实测：compiled binary 成功连接数据库执行 doctor/embed，bunfs bug 可能已修复 |
 | 0 chunks embedded | 直接写文件没走 stdin | 用 `gbrain put slug --content '...'` |
 | query 返回空或极低分 | 环境变量未设置或 Infinity 离线 | 检查 `EMBEDDING_BASE_URL` / `USE_LOCAL_INFINITY`，验证 Infinity 在线 |
 | subprocess input=bytes 报错 | 要求 str | `input=content` 而非 `.encode()` |
@@ -595,6 +594,7 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `doctor --fast` 报 "Could not find skills directory" 但 skills 目录存在 | doctor 的 skills 路径解析有bug | 可忽略此warn，skills实际存在且可用 |
 | `doctor --fast` 报 "connection: No database configured (filesystem checks only)" | compiled binary 运行时 HOME 环境变量问题；也可能是真的没有初始化数据库 | 使用 `~/.bun/bin/bun run ~/gbrain/src/cli.ts doctor --fast`；如仍报此错误需先 `gbrain init --pglite` |
 | `doctor --fast` 输出 Health score: 90/100 | 正常（90分是 PGLite 未初始化时的正常分数）| 不影响使用，但 query/search 等功能需要初始化数据库 |
+| `doctor --json` resolver_health 10 warnings | 9个 DRY violations（skill 内联 conventions/quality.md 规则）+ 1个 MECE overlap（maintain↔citation-fixer）| 不影响核心功能；修复：在 RESOLVER.md 添加 disambiguation rule 或 narrow skill triggers |
 | `doctor --fast` 报 resolver_health MECE_OVERLAP/DRY_VIOLATION warnings | skills 内部有重复规则和分类重叠，属于设计问题 | 不影响核心功能，可忽略；如需修复在 RESOLVER.md 添加 disambiguation |
 | `doctor --fast` 只做文件系统检查，不测数据库 | 2026-04-20 cron 实测：即使 Postgres 连不上，仍返回 90/100 并显示 resolver_health warnings | 验证数据库真实连接用 `gbrain stats`；`doctor --fast` 只检查 skills 文件系统完整性 |
 | `gbrain put` 超时（30s+） | Schema vector(1536) 与 BAAI/bge-m3 输出 1024 维不匹配 | 修改 schema 文件 `vector(1536)` → `vector(1024)`，重建数据库 |
