@@ -263,8 +263,14 @@ doctor --json 输出格式（2026-04-21 实测）：
 快速检查输出示例：Health score: 9/10，Embed coverage: 100%。
 
 ```bash
-bun run ~/gbrain/src/cli.ts list           # 列出向量数据库中所有页面
+bun run ~/gbrain/src/cli.ts list           # 列出向量数据库中所有页面（默认50条）
+bun run ~/gbrain/src/cli.ts list --limit 300  # 列出前300条
+bun run ~/gbrain/src/cli.ts list --tag person  # 按标签过滤（注意：tag过滤可能不工作，返回空）
 bun run ~/gbrain/src/cli.ts stats          # 向量数据库统计
+# 注意：`list --json` 不返回 JSON！CLI 接受 --json flag 但仍输出 tab-separated 纯文本。
+# 如需解析 list 输出，需自行解析 tab-separated 格式：
+#   格式：slug\ttype\tdate\ttitle
+```
 bun run ~/gbrain/src/cli.ts get <slug>     # 从向量数据库查看页面内容
 bun run ~/gbrain/src/cli.ts embed <slug>   # 强制对某页面重新 embedding
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale  # 对所有 stale 页面重新 embedding
@@ -285,7 +291,17 @@ bun run ~/gbrain/src/cli.ts delete <slug>  # 从向量数据库删除页面
 
 `gbrain put` 在 embedding 失败（连接超时）时会 hang 直到超时（30s+），即使内容已成功写入数据库。
 
-**正确做法：** 后台运行，8秒后kill取输出：
+**推荐做法（2026-05-03 实测成功）：** 用 terminal background=true + wait，命令会自己完成：
+```bash
+cd /home/lxgxdx && ~/.bun/bin/bun run ~/gbrain/src/cli.ts put <slug> --content "$(cat /tmp/content.md)" > /tmp/gbrain_put.log 2>&1 &
+wait
+cat /tmp/gbrain_put.log
+~/.bun/bin/bun run ~/gbrain/src/cli.ts get <slug>  # 验证
+```
+
+**原理**：foreground shell 超时（25-30s）但后台 bun 进程会自己完成并退出。`wait` 等待后台进程退出，`> log` 重定向捕获输出。90s 足够完成大多数 put 操作。
+
+**旧法（仍可用但不需要 kill）**：
 ```bash
 cd /home/lxgxdx/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts put <slug> --content '<yaml>' &
 PID=$!
@@ -297,7 +313,9 @@ echo "Done"
 
 输出中的 `[gbrain] embedding failed for <slug>` 表示内容已写入、仅embedding失败。
 
-**`--content` flag vs stdin：** `--content` 参数方式等价于 stdin，且更简洁。两者都会在 embedding 失败时超时。
+**`--content` flag vs stdin：** 两者等价，都会在 embedding 失败时超时。`--content` 更简洁（避免 stdin 重定向的安全扫描问题）。
+
+**2026-05-03 实测**：`novel-project` 页面（~1KB markdown）background=true + wait(90s) 成功，输出 `{"slug": "novel-project", "status": "created_or_updated", "chunks": 1}`。
 
 ## 本地 Infinity 向量服务配置（2026-04-18）
 
