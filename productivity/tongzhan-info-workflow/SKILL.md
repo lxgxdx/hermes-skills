@@ -35,26 +35,33 @@ description: 统一战线信息稿工作流。触发词：搜索选题/信息稿
 - 说明：Searxng 聚合 Google/Baidu 等引擎，支持中文，返回 JSON
 
 ```python
-import urllib.request, urllib.parse, json
+from urllib.parse import quote
 
 def searxng_search(query, max_results=8):
-    """使用 Searxng 元搜索引擎搜索网页"""
+    """使用 Searxng 元搜索引擎搜索网页
+    
+    注意：必须用 quote() 而非 urlencode() 编码中文，否则中文查询返回 0 条结果。
+    同时用 r.get("title", "") 而非 r["title"]，避免 KeyError。
+    """
     base_url = "http://192.168.88.68:8083"
-    params = urllib.parse.urlencode({
-        "q": query,
-        "format": "json",
-        "engines": "google,baidu",
-        "limit": max_results
-    })
-    url = f"{base_url}/search?{params}"
+    # ⚠️ 必须用 quote() 编码中文，urlencode() 会导致中文搜索全部返回空结果
+    url = f"{base_url}/search?q={quote(query)}&format=json&limit={max_results}"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=15) as resp:
         data = json.load(resp)
     results = data.get("results", [])[:max_results]
-    return [(r["title"], r["url"], r.get("content", "")) for r in results]
+    return [(r.get("title", ""), r.get("url", ""), r.get("content", "")) for r in results]
 ```
 
 **本地搜索**：search_files 工具搜索 /mnt/nfs/2026年统战工作 目录下的 docx/doc 文件
+
+> ⚠️ **`.doc` 文件无法直接读取**：`search_files` 的 `target=content` 对 `.doc`（Office 97-2003 二进制格式）返回空结果，python-docx 也会报 `PackageNotFoundError`。必须先转换为 txt：
+> ```bash
+> mkdir -p /tmp/tz_docs
+> libreoffice --headless --convert-to txt "文件名.doc" --outdir /tmp/tz_docs/
+> ```
+> 然后用 `read_file` 读取生成的同名 `.txt` 文件。
+> 验证文件格式：`file "文件名.doc"`（含 "Composite Document File V2 Document" 即为旧格式）。
 
 **Searxng 配置说明**：
 - 配置文件：`/mnt/user/appdata/searxng/settings.yml`
@@ -64,12 +71,18 @@ def searxng_search(query, max_results=8):
 **问题类（每天 01:00 执行）**：
 - 外网（Searxng）：
   - **民族宗教方向**：搜索政府网站 + 权威媒体，找具体案例
-    - 搜索词如：`民族宗教 问题 乱象 2025`、`佛教道教 商业化 违规 2025`
-  - **台湾方向**（必须用台湾媒体来源，找具体问题）：
-    - 搜索词需加 `site:cna.com.tw` 限定中央社，或加 `site:udn.com` 限定联合报
-    - 搜索词如：`台胞 大陸 銀行 問題 site:cna.com.tw`、`兩岸 匯款 資金 問題 site:cna.com.tw`
-    - **台湾媒体优先级**：中央社(cna.com.tw) > 聯合報(udn.com) > 天下雜誌(cw.com.tw)
-    - 中央社是台湾官方通讯社，报道客观、数据权威，优先使用
+    - 搜索词如：`民族宗教 问题 乱象 2025 统一战线`、`佛教道教 商业化 违规 2025`
+  - **台湾方向**（2026年5月实测策略）：
+
+⚠️ **重要：Searxng 的 google/baidu 引擎几乎不返回台湾相关结果。** 2026年5月实测发现：
+- 即使使用 `site:cna.com.tw` 限定，台湾方向搜索词（如"台湾青年 大陆 就业 创业 困难"、"台胞 社保 医疗 子女上学 问题"等）绝大多数返回空结果
+- 少数能返回结果的台湾方向搜索词：`台湾艺人 赴大陆 发展 限制 2025`、`台商 转型升级 经营 困难 2025`、`两岸婚姻 家庭 子女 教育 问题`——这些在 google 有更多报道
+
+**实战替代方案**：
+- **直接搜索具体话题**（不加 site 限定）：`台湾青年 大陆 就业 创业 困难 2025` 有时能返回台海杂志、国台办官网等结果
+- **优先用开放的网络来源**：台湾自由时报(ltn.com.tw)、台湾报道者(twreporter.org)、雅虎奇摩新闻(tw.news.yahoo.com)等对 Searxng 更友好
+- **兜底策略**：如果台湾方向搜索结果极少（<5条），可结合**常识知识**和**已知政策背景**补充选题，确保每个选题有至少1条可查引用来源
+- **不可依赖 curl/wget 直接抓台湾网站**：多数台湾新闻网站对大陆 IP 有访问限制
 - 本地：搜索 /mnt/nfs/2026年统战工作 目录下 docx/doc 文件，找近期工作动态
 
 **经验类（每天 02:00 执行）**：
@@ -351,7 +364,12 @@ with urllib.request.urlopen(req) as resp:
 
 ---
 
-## 七、Searxng 运维注意事项
+## 七、常见问题排查
+
+### 7.1 Searxng 返回 0 条结果
+- **检查 JSON 格式**：先跑 `curl "http://192.168.88.68:8083/search?q=统一战线&format=json&limit=2"` 看返回是否含 `results` 数组
+- **中文编码**：Python 中必须用 `urllib.parse.quote()` 而非 `urllib.parse.urlencode()`，后者对含中文的查询字符串编码不当，导致 Searxng 返回 0 条结果
+- **确认 `search.formats` 包含 `json`**：见上面配置说明
 
 - 配置文件：`/mnt/user/appdata/searxng/settings.yml`
 - **必须**在 `search.formats` 中加入 `json`，否则 JSON API 返回 403
@@ -368,5 +386,5 @@ with urllib.request.urlopen(req) as resp:
 4. **定时任务模型**：凌晨搜索用 deepseek-v4-flash，控制成本
 5. **初稿不需要严格控字**：详细完整即可，字数不限
 6. **Searxng API 必须加 `format=json` 参数**：否则返回 HTML，解析失败
-7. **台湾搜索策略**：必须加 `site:cna.com.tw` 限定中央社，中央社优先于其他来源
+7. **台湾搜索策略**：用直接搜索话题而非 site 限定。Searxng 的 google/baidu 引擎对 `site:cna.com.tw` 等台湾域名搜索效果差，建议不加 site 限定直接搜具体话题
 8. **初稿必须自检**：生成后对照"充实度检查清单"，缺数据/来源/案例必须补充后再发飞书

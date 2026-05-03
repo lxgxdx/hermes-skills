@@ -313,7 +313,8 @@ Type these during an interactive chat session.
 ```
 ~/.hermes/config.yaml       Main configuration
 ~/.hermes/.env              API keys and secrets
-~/.hermes/skills/           Installed skills
+~/.hermes/skills/           User-installed skills (hub skills, NOT auto-loaded)
+~/.hermes/hermes-agent/skills/  Built-in skills (auto-discovered, NOT user skills)
 ~/.hermes/sessions/         Session transcripts
 ~/.hermes/logs/             Gateway and error logs
 ~/.hermes/auth.json         OAuth tokens and credential pools
@@ -550,6 +551,27 @@ terminal(command="tmux new-session -d -s resumed 'hermes --resume 20260225_14305
 2. `hermes skills config` — check platform enablement
 3. Load explicitly: `/skill name` or `hermes -s name`
 
+### Skills Installing But Not Loading (Critical Path Bug)
+
+**Symptom:** `hermes skills list` shows skills installed in `~/.hermes/skills/`, but Hermes does NOT use them during sessions. `skill_view` calls succeed but the skill content comes from the built-in path instead. Tools that depend on user skills (like hermes-agent-self-evolution) cannot find them.
+
+**Root cause:** Hermes auto-discovers skills only from `~/.hermes/hermes-agent/skills/` (built-in), NOT from `~/.hermes/skills/` (user hub). User-installed skills go to the hub directory but are never auto-loaded.
+
+**Diagnosis:**
+```bash
+# Check what Hermes actually sees
+hermes skills list
+
+# Compare with what's in the user skills directory
+ls ~/.hermes/skills/
+
+# The two must match for skills to load — if they don't, this is the bug
+```
+
+**Workaround for hermes-agent-self-evolution:** Set `HERMES_AGENT_REPO=~/.hermes` so the tool looks in the right place.
+
+**This is a known gap** — user skills via `hermes skills install` go to `~/.hermes/skills/` but Hermes does not read them from there. Track upstream fix at: https://github.com/NousResearch/hermes-agent/issues
+
 ### Gateway issues
 Check logs first:
 ```bash
@@ -623,6 +645,7 @@ hermes config set auxiliary.vision.model <model_name>
 | CLI commands | `hermes --help` or [CLI reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands) |
 | Gateway logs | `~/.hermes/logs/gateway.log` |
 | Session files | `~/.hermes/sessions/` or `hermes sessions browse` |
+| Diagnostic queries | `references/state-db-diagnostic-queries.md` — skill efficiency, tool distribution, task topic SQL |
 | Source code | `~/.hermes/hermes-agent/` |
 
 ---

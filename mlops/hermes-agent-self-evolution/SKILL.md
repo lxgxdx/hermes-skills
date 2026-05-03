@@ -110,14 +110,25 @@ Found 0 relevant examples
 
 **推荐流程**：先用 synthetic 验证工具正常运作，再在感兴趣的 skill 上用 sessiondb 跑。
 
-## 高价值优化候选（按实际使用频率排序）
+## 高价值优化候选（按 state.db 真实使用数据分析，2026-05-03）
 
-根据 Hermes state.db 的 session 分析（2026-04-22）：
-- `dogfood`：专门用于自我进化的技能，用它优化自己价值最大
-- `ppt-master-usage`：PPT 相关关键词 732 次，流程复杂失败模式多
-- `easyocr-unraid-p4-deploy`：刚部署，GPU 模式还在调，有大量真实 failure case
-- `html-ppt`：11129 chars，结构复杂
-- `homeassistant-lovelace-cards`：9916 chars，涉及 Home Assistant API 调用
+从 Hermes state.db（418 sessions / 7944 tool_calls）分析 skill 效率：
+
+**选择指标**：调用该 skill 后，重复 `skill_view` 的次数（越高说明 Agent 没记住流程，每次都重看）
+
+| Skill | 有效 Follow-up | 无效重复 | 效率评级 | 说明 |
+|-------|----------------|----------|----------|------|
+| `ppt-master-usage` | 13 | 9 | 🔴 最低 | 调用后 9 次重复看 skill，Agent 根本记不住流程 |
+| `infinity-unraid-deploy` | 5 | 8 | 🔴 低 | 同上 |
+| `pptagent-deploy` | 5 | 10 | 🔴 低 | 同上 |
+| `easyocr-unraid-p4-deploy` | 16 | 10 | 🟡 中 | 有失败案例，但依赖固定步骤 |
+| `homeassistant-lovelace-cards` | 9 | 4 | 🟡 高 | 效率较好 |
+| `gbrain-ops` | 72 | 3 | 🟡 高 | 效率高，但被调用次数多 |
+| `unraid-p4-ocr-deploy` | 20 | 0 | ✅ 极高 | 零重复，已达最优 |
+| `gbrain-cli-usage` | 14 | 0 | ✅ 极高 | 零重复 |
+| `llm-wiki-build` | 11 | 0 | ✅ 极高 | 零重复 |
+
+**结论**：`ppt-master-usage` 是最佳优化候选（真实任务量第4，但 skill 重复调用率最高）。`minimax-dspy-evolution-fix` 无有效 follow-up，已失效。
 
 ## 常用命令
 
