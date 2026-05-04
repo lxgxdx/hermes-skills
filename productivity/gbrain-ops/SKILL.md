@@ -635,4 +635,19 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `cat | bun` 报 "approval_required" | 触发 Pipe to interpreter 安全扫描 | 用文件重定向代替管道：`bun run ... < /tmp/file.md` |
 | `cat | python3` 或 `python3 << 'EOF'` 报 "approval_required" | tirith:pipe_to_interpreter 安全策略阻止所有管道到解释器 | 用 `write_file` 写脚本到文件，再用 `python3 /tmp/script.py` 执行 |
 
+---
+
+## 通知发送故障排查
+
+**症状**：cron job 主流程成功但通知发送失败，导致脚本 exit ≠ 0，Hermes 报告 "Script Error"，用户没收到任何消息。
+
+**排查顺序**：
+1. **Telegram** — `TELEGRAM_BOT_TOKEN` + `TELEGRAM_HOME_CHANNEL` 在 `~/.hermes/.env`；404 = token 无效或 bot 未完成 start
+2. **Feishu** — `FEISHU_APP_ID` + `FEISHU_APP_SECRET` 在 `~/.hermes/.env`；10014 = secret 已失效
+3. **WeChat** — `WEIXIN_TOKEN` + `WEIXIN_HOME_CHANNEL`；无响应 = 需检查 Hermes gateway 日志确认发送状态
+
+**关键教训**：通知失败 ≠ 数据失败。文档同步成功后通知失败，不应重跑脚本。
+
+**参考**：`references/frigate-wiki-notify-failure-2026-05-04.md`（2026-05-04 实战记录）
+
 
