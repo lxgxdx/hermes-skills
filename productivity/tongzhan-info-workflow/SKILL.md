@@ -35,17 +35,23 @@ description: 统一战线信息稿工作流。触发词：搜索选题/信息稿
 - 说明：Searxng 聚合 Google/Baidu 等引擎，支持中文，返回 JSON
 
 ```python
-from urllib.parse import quote
+import urllib.request, urllib.parse, json
 
 def searxng_search(query, max_results=8):
     """使用 Searxng 元搜索引擎搜索网页
     
-    注意：必须用 quote() 而非 urlencode() 编码中文，否则中文查询返回 0 条结果。
+    注意：必须用 urllib.parse.quote() 编码中文_query_部分，否则中文查询返回 0 条结果。
     同时用 r.get("title", "") 而非 r["title"]，避免 KeyError。
     """
     base_url = "http://192.168.88.68:8083"
-    # ⚠️ 必须用 quote() 编码中文，urlencode() 会导致中文搜索全部返回空结果
-    url = f"{base_url}/search?q={quote(query)}&format=json&limit={max_results}"
+    # ⚠️ 关键词部分用 quote() 编码，params 整体用 urlencode() 包装
+    params = urllib.parse.urlencode({
+        "q": query,          # query 本身已含中文，urlencode 会正确处理
+        "format": "json",
+        "engines": "google,baidu",
+        "limit": max_results
+    })
+    url = f"{base_url}/search?{params}"
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=15) as resp:
         data = json.load(resp)
@@ -53,7 +59,48 @@ def searxng_search(query, max_results=8):
     return [(r.get("title", ""), r.get("url", ""), r.get("content", "")) for r in results]
 ```
 
-**本地搜索**：search_files 工具搜索 /mnt/nfs/2026年统战工作 目录下的 docx/doc 文件
+> ⚠️ **Searxng 服务不可用时的兜底策略**：如果 searxng_search() 所有查询均返回空结果（连 `results` 列表都是空的），说明服务本身不可用。此时必须切换到以下兜底方案，不得跳过搜索直接凭记忆编造选题：
+> 1. **直接读取本地已有材料**（见下方"本地材料搜索"）—— 工作总结、范文等 docx 文件中已有大量本地创新做法
+> 2. **外地借鉴选题改为"方法论参考"**：从本地材料中提及的外出考察学习方向（如"赴深圳、潍坊学习"）提炼方法论，不依赖外网搜索
+> 3. **结合领域常识和政策背景补充选题**，确保每个选题有据可查
+> 
+> **验证 Searxng 是否恢复**：手动跑 `curl "http://192.168.88.68:8083/search?q=统一战线&format=json&limit=2"` 看是否返回含 `results` 的 JSON
+
+**本地搜索（两层策略）**：
+
+**第一层：search_files** — 快速定位文件
+- 搜索 /mnt/nfs/2026年统战工作 目录下的 docx/doc 文件
+- ⚠️ **`search_files` 的 `target=content` 对中文关键词返回 0 结果**（不论 `file_glob` 设什么），这是工具已知局限
+- 因此 `content` 模式只用于英文/拼音搜索；中文搜索改用第二层
+
+**第二层：python-docx 直接读取内容**
+- 定位到具体文件后，用 python-docx 直接读取段落文本进行内容分析
+- 关键文件清单（优先读）：
+  - `6.巡查部机关/3.材料/4.工作总结及要点/2025/2025年全县统战工作情况.docx` — 年度全局工作
+  - `6.巡查部机关/7.上报材料/4.工作总结及要点/2024/县委统战部2024年度工作总结.docx` — 去年工作亮点
+  - `8.信息工作/范文/2026年/4月/` — 最新范文（已发布的经验类信息稿）
+  - `1.办公室/34.奋进十五五民企宣传/` — 民营企业特色做法
+  - `1.办公室/10.接待工作/4.23厉华珍调研信息工作/` — 信息工作专项汇报
+
+```python
+import subprocess, os
+
+def read_docx_paragraphs(fpath):
+    """读取 docx 文件所有段落文本，兼容中文路径"""
+    safe = fpath.replace("'", "'\"'\"'")
+    result = subprocess.run(
+        ["python3", "-c",
+         f"import docx; doc=docx.Document('{safe}');"
+         f"[print(p.text.strip()) for p in doc.paragraphs if p.text.strip()]"],
+        capture_output=True, text=True, timeout=15
+    )
+    return result.stdout
+
+# 示例：读取 2025 年工作总结前 30 段
+fpath = "/mnt/nfs/2026年统战工作/6.巡查部机关/3.材料/4.工作总结及要点/2025/2025年全县统战工作情况.docx"
+text = read_docx_paragraphs(fpath)
+print(text[:3000])
+```
 
 > ⚠️ **`.doc` 文件无法直接读取**：`search_files` 的 `target=content` 对 `.doc`（Office 97-2003 二进制格式）返回空结果，python-docx 也会报 `PackageNotFoundError`。必须先转换为 txt：
 > ```bash
@@ -351,7 +398,7 @@ with urllib.request.urlopen(req) as resp:
 
 ---
 
-## 六、参考资料位置
+## 六、参考文件
 
 | 文件 | 路径 |
 |------|------|
@@ -359,8 +406,8 @@ with urllib.request.urlopen(req) as resp:
 | 问题类范文（详尽） | /mnt/nfs/2026年统战工作/8.信息工作/（例子）台湾老兵骨灰迁回大陆诉求升温需引起重视.docx |
 | 问题类范文（最新） | /mnt/nfs/2026年统战工作/8.信息工作/8.台商在大陆资金汇回渠道便捷性有待提升/终稿.docx |
 | 问题类范文（完整案例） | /mnt/nfs/2026年统战工作/8.信息工作/范文/2026年/4月/（五莲县信息）关于两岸机车贸易壁垒梗阻民族品牌融合发展的原因及对策建议.docx |
-| 经验类范文 | /mnt/nfs/2026年统战工作/8.信息工作/1.二手交易平台非法传度授箓问题亟需引起重视/1.0.docx |
 | 经验类批量参考 | /mnt/nfs/2026年统战工作/8.信息工作/范文/2026年/4月/ |
+| **本地重要文档清单** | `references/known-local-docs.md`（本 skill 目录，含关键文件路径+内容摘要+数字备忘） |
 
 ---
 
@@ -368,13 +415,21 @@ with urllib.request.urlopen(req) as resp:
 
 ### 7.1 Searxng 返回 0 条结果
 - **检查 JSON 格式**：先跑 `curl "http://192.168.88.68:8083/search?q=统一战线&format=json&limit=2"` 看返回是否含 `results` 数组
-- **中文编码**：Python 中必须用 `urllib.parse.quote()` 而非 `urllib.parse.urlencode()`，后者对含中文的查询字符串编码不当，导致 Searxng 返回 0 条结果
-- **确认 `search.formats` 包含 `json`**：见上面配置说明
-
-- 配置文件：`/mnt/user/appdata/searxng/settings.yml`
-- **必须**在 `search.formats` 中加入 `json`，否则 JSON API 返回 403
+- **中文编码**：Python 中 query 字符串整体用 `urllib.parse.urlencode({"q": query, ...})` 编码，quote 只用于 URL 路径参数而非整段查询；Searxng 元搜索对 URL 编码格式敏感
+- **确认 `search.formats` 包含 `json`**：配置文件 `/mnt/user/appdata/searxng/settings.yml`，必须在 `search.formats` 中加入 `json`，否则 JSON API 返回 403
 - 容器内端口 8080，映射到宿主机 8083
-- 容器重启命令：`docker restart searxng`（在 Unraid 上执行）
+- 容器重启命令（在 Unraid 上）：`docker restart searxng`
+- **全部查询都返回空**：执行 curl 验证后仍无 `results`，说明服务不可用，切换到兜底策略（见上方"搜索方式"中的 Searxng 不可用兜底策略）
+
+### 7.2 search_files 对中文关键词返回 0
+- **这是工具已知局限**，`target=content` 模式对中文检索失效
+- 改用 python-docx 直接读取 docx 文件内容（见上方"本地搜索第二层"）
+- 文件名本身含中文可正常搜索：`pattern=*.docx` 按文件名搜索可用
+
+### 7.3 python-docx 读取报 PackageNotFoundError
+- 文件是旧版 `.doc` 格式（非 `.docx`），python-docx 无法读取
+- 用 `file "文件名.doc"` 验证，含 "Composite Document File V2 Document" 即为旧格式
+- 用 libreoffice 转换：`libreoffice --headless --convert-to txt "文件名.doc" --outdir /tmp/tz_docs/`
 
 ---
 

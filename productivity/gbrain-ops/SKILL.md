@@ -9,7 +9,9 @@ description: GBrain 个人知识库操作手册。涵盖 gbrain put 必须通过
 
 所有命令使用：`bun run ~/gbrain/src/cli.ts <cmd>`
 
-**推荐使用** `bun run src/cli.ts` — compiled binary `/home/lxgxdx/gbrain/bin/gbrain` 有 bunfs 路径 bug，会报 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`。
+**推荐使用** `~/.bun/bin/bun run ~/gbrain/src/cli.ts` — 需要 bun 环境。
+
+compiled binary `/home/lxgxdx/gbrain/bin/gbrain` 在某些环境下有 bunfs bug（`ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`），但 2026-05-06 cron 实测在当前环境可用。保险起见始终用 bun 方式。
 
 ### Cron/非交互环境下的正确调用方式
 
@@ -242,17 +244,19 @@ Compiled binary (`/home/lxgxdx/gbrain/bin/gbrain`) 在无数据库环境下行�
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts doctor --json   # JSON格式，可解析
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts doctor          # 完整检查
 
-doctor --json 输出格式（2026-04-21 实测）：
+doctor --json 输出格式（2026-05-06 实测）：
 ```json
 {
   "schema_version": 2,
   "status": "warnings",
   "health_score": 95,
   "checks": [
-    {"name": "resolver_health", "status": "warn", "message": "Could not find skills directory"},
-    {"name": "connection", "status": "ok", "message": "Connected, 30 pages"},
+    {"name": "resolver_health", "status": "warn", "message": "10 issue(s): 0 error(s), 10 warning(s)"},
+    {"name": "skill_conformance", "status": "ok", "message": "25/25 skills pass"},
+    {"name": "connection", "status": "ok", "message": "Connected, 250 pages"},
     {"name": "pgvector", "status": "ok", "message": "Extension installed"},
     {"name": "rls", "status": "ok", "message": "RLS enabled on all tables"},
+    {"name": "schema_version", "status": "ok", "message": "Version 4 (latest: 4)"},
     {"name": "embeddings", "status": "ok", "message": "100% coverage, 0 missing"},
     {"name": "link_integrity", "status": "ok", "message": "No dead links"}
   ]
@@ -274,11 +278,11 @@ bun run ~/gbrain/src/cli.ts stats          # 向量数据库统计
 bun run ~/gbrain/src/cli.ts get <slug>     # 从向量数据库查看页面内容
 bun run ~/gbrain/src/cli.ts embed <slug>   # 强制对某页面重新 embedding
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale  # 对所有 stale 页面重新 embedding
-# 输出示例：
-#   1/30 pages, 0 chunks embedded
+# 输出示例（100% coverage 时）：
+#   1/250 pages, 0 chunks embedded
 #   ...
-#   30/30 pages, 0 chunks embedded
-#   Embedded 0 chunks across 30 pages
+#   250/250 pages, 0 chunks embedded
+#   Embedded 0 chunks across 250 pages
 # 注意：0 chunks 是正常的（100% coverage 时），不代表失败
 bun run ~/gbrain/src/cli.ts search <词>    # tsvector 关键词搜索（可靠）
 bun run ~/gbrain/src/cli.ts query <句>     # 向量语义搜索
@@ -618,7 +622,7 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 
 ## 已知问题速查
 |------|------|------|
-| compiled binary 报 ENOENT (bunfs bug) | 仅限某些环境 | 2026-04-29 cron 实测：compiled binary 成功连接数据库执行 doctor/embed，bunfs bug 可能已修复 |
+| compiled binary 报 ENOENT (bunfs bug) | 仅限某些环境 | 2026-05-06 cron 实测：compiled binary 在当前环境可用，但保险起见仍用 bun 方式 |
 | 0 chunks embedded | 直接写文件没走 stdin | 用 `gbrain put slug --content '...'` |
 | query 返回空或极低分 | 环境变量未设置或 Infinity 离线 | 检查 `EMBEDDING_BASE_URL` / `USE_LOCAL_INFINITY`，验证 Infinity 在线 |
 | subprocess input=bytes 报错 | 要求 str | `input=content` 而非 `.encode()` |
