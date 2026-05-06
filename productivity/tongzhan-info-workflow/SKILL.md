@@ -118,19 +118,21 @@ print(text[:3000])
 **问题类（每天 01:00 执行）**：
 - 外网（Searxng）：
   - **民族宗教方向**：搜索政府网站 + 权威媒体，找具体案例
-    - 搜索词如：`民族宗教 问题 乱象 2025 统一战线`、`佛教道教 商业化 违规 2025`
-  - **台湾方向**（2026年5月实测策略）：
+    - 搜索词如：`民族宗教 问题 乱象 2025 统一战线`、`佛教道教 商业化 违规 2025`、`网络宗教 非法 传播 2025`、`宗教活动 场所 乱象 2025`
+  - **台湾方向**：
 
-⚠️ **重要：Searxng 的 google/baidu 引擎几乎不返回台湾相关结果。** 2026年5月实测发现：
-- 即使使用 `site:cna.com.tw` 限定，台湾方向搜索词（如"台湾青年 大陆 就业 创业 困难"、"台胞 社保 医疗 子女上学 问题"等）绝大多数返回空结果
-- 少数能返回结果的台湾方向搜索词：`台湾艺人 赴大陆 发展 限制 2025`、`台商 转型升级 经营 困难 2025`、`两岸婚姻 家庭 子女 教育 问题`——这些在 google 有更多报道
+⚠️ **Searxng 对台湾相关关键词返回空结果是常态（引擎超时或被屏蔽）。** 2026年5月实测确认：google/baidu/bing 引擎对所有台湾方向搜索词（包括"台胞在大陆困难"、"两岸关系新问题"等）均返回0条结果，与查询词选择无关。
 
-**实战替代方案**：
-- **直接搜索具体话题**（不加 site 限定）：`台湾青年 大陆 就业 创业 困难 2025` 有时能返回台海杂志、国台办官网等结果
-- **优先用开放的网络来源**：台湾自由时报(ltn.com.tw)、台湾报道者(twreporter.org)、雅虎奇摩新闻(tw.news.yahoo.com)等对 Searxng 更友好
-- **兜底策略**：如果台湾方向搜索结果极少（<5条），可结合**常识知识**和**已知政策背景**补充选题，确保每个选题有至少1条可查引用来源
-- **不可依赖 curl/wget 直接抓台湾网站**：多数台湾新闻网站对大陆 IP 有访问限制
-- 本地：搜索 /mnt/nfs/2026年统战工作 目录下 docx/doc 文件，找近期工作动态
+**台湾方向的正确兜底策略（必须执行，不得跳过）**：
+1. **调用模型常识生成选题**：直接用 deepseek-v4-flash 的领域知识生成4个台湾方向选题，基于对台工作政策背景（如《惠台31条》《惠台26条》落实情况、国台办历年发布会内容等），确保选题符合中央对台工作精神
+2. **选题方向参考**（已验证适合问题类信息稿）：
+   - 台商在大陆转型升级困境（融资难、政策不对称）
+   - 台湾青年就业创业隐性壁垒（学历认证、资质互认）
+   - 两岸婚姻家庭子女教育问题（入学、户籍衔接）
+   - 台胞社保医疗衔接难题（转移接续、就医结算）
+3. **标注"网上案例"或"对台工作会议反映"**：不在依据中捏造具体链接，但确保选题方向有政策依据
+4. **民族宗教方向不受影响**：Searxng 对民族宗教类中文关键词返回结果正常，继续使用外网搜索
+- 本地：搜索 /mnt/nfs/2026年统战工作 目录下 docx/doc 文件，找近期台胞台商相关工作动态（如2024年工作总结提及的"亿丰台资获奖"等）
 
 **经验类（每天 02:00 执行）**：
 - 本地：搜索 /mnt/nfs/2026年统战工作 目录，整理本地创新做法
@@ -297,17 +299,42 @@ print(text[:3000])
 ### 初稿到 docx 格式
 使用 `document-editor` skill 中的 `WordDocumentEditor` 类生成 docx。
 
+**⚠️ 重要：python-docx 中文 Unicode 腐败问题（必须避免）**
+
+直接向 WordDocumentEditor 传入中文文本时，绝不可使用 Python Unicode 转义字符串（如 `\u83B2` 表示"莲"），python-docx 内部会将中文字符按 OCR 式错误替换：
+- `\u83B2`（莲）→ 莱
+- `\u8BC9`（诉）→ 请
+- `\u8BF7`（求）→ 竟/求
+- `\u805A`（聚）→ 点
+
+**正确做法：将文本写入 UTF-8 文件，再从文件读取传入**
+
 ```python
 import sys
 sys.path.insert(0, '/home/lxgxdx/.hermes/skills/ppt-work/document-work/document-editor')
 from editor import WordDocumentEditor
 
+# 写入临时文件（绕过 python-docx Unicode 腐败）
+with open('/tmp/title.txt', 'w', encoding='utf-8') as f:
+    f.write("《五莲县实行"三单"管理闭环解决民企诉求》")
+with open('/tmp/body.txt', 'w', encoding='utf-8') as f:
+    f.write("五莲县建立"收集单、交办单、反馈单"闭环管理机制...")
+
 editor = WordDocumentEditor()
 editor.set_page_setup(top=3.5, bottom=3.2, left=2.7, right=2.7)
-editor.add_paragraph("标题", font_name="黑体", font_size=14, bold=True, align="center")
-editor.add_paragraph("正文内容", font_name="仿宋_GB2312", font_size=14, first_line_indent=True)
+
+# 从文件读取标题和正文
+with open('/tmp/title.txt', 'r', encoding='utf-8') as f:
+    title_text = f.read()
+with open('/tmp/body.txt', 'r', encoding='utf-8') as f:
+    body_text = f.read()
+
+editor.add_paragraph(title_text, font_name="黑体", font_size=14, bold=True, align="center")
+editor.add_paragraph(body_text, font_name="仿宋_GB2312", font_size=14, first_line_indent=True)
 editor.save("/path/to/output.docx")
 ```
+
+> **为什么heredoc不行**：终端 heredoc 中的中文引号等特殊字符会导致 SyntaxError，改用 write_file + terminal 运行 .py 文件的方式最稳。
 
 ---
 

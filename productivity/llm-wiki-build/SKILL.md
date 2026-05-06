@@ -112,6 +112,7 @@ sources: []
 
 - 英文文档站超时：改用中文镜像站（适用于 Frigate 等主流项目）
 - Wiki 页面内容需要实际使用中持续补充，初始构建只建框架
+- **飞书 webhook 19001 错误**：调用飞书机器人 webhook 时，若返回 `invalid access token`（错误码 19001），说明 webhook 地址无效或已被禁用。此错误在 cron job 场景下难以提前发现，建议在任务末尾附带"如未收到通知请检查 webhook 配置"的兜底提示。
 
 ## 知识库分工（用户2026-04-19确立）
 
@@ -135,6 +136,7 @@ delegate_task(tasks=[
 - 每个 subagent 独立读取源文档、写入目标文件，无需主 agent 中转数据
 - 5个页面并行约60-90秒完成，单 agent 串行需要5倍以上时间
 - 适合20+页面规模的大批量创建；少量页面（1-3个）直接串行更简单
+- **4页场景实测（2026-05-07）**：2个并行 subagent（各带2个任务）完成约65秒；同等规模5并行反而 overhead 更大。批量小时减少并行数可提升效率。
 - 批量大时让 subagent 一次处理多个页面（`tasks` 数组），减少任务启动 overhead
 - Klipper 45页实测：分9批（每批5个），全部完成约2小时（含并发延迟）
 
@@ -145,6 +147,7 @@ delegate_task(tasks=[
 - Frigate Wiki: `~/wiki/`
 - Klipper Wiki: `~/klipper-wiki/`
 - Home Assistant Wiki: `~/ha-wiki/`（2026-04-20 新建，与 Frigate 完全独立）
+- PVE Wiki: `~/pve-wiki/`（2026-05-07 新建，虚拟化平台）
 - GBrain：对话记忆/碎片想法，与 LLM Wiki 分工明确
 
 ## 多项目 Wiki 并行构建（2026-04-20 经验）

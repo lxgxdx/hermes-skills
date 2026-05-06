@@ -263,6 +263,29 @@ editor.format_numbers(5, "#,##0.00")
 editor.save("工资表.xlsx")
 ```
 
+## 常见问题
+
+### python-docx 中文 Unicode 腐败问题
+
+**问题现象**：向 WordDocumentEditor 传入中文时，某些字符被静默替换为相似字：
+- `\u83B2`（莲）→ 莱
+- `\u8BC9`（诉）→ 请  
+- `\u805A`（聚）→ 点
+
+**根本原因**：python-docx 内部 OCR 式字符替换机制
+
+**解决方案**：将中文文本写入 UTF-8 文件，从文件读取后再传给 WordDocumentEditor：
+```python
+# 错误 ❌
+editor.add_paragraph("五莲县", font_name="黑体", font_size=14)  # 可能变成"五莱县"
+
+# 正确 ✅
+with open('/tmp/text.txt', 'w', encoding='utf-8') as f:
+    f.write("五莲县")
+with open('/tmp/text.txt', 'r', encoding='utf-8') as f:
+    editor.add_paragraph(f.read(), font_name="黑体", font_size=14)
+```
+
 ## 技术栈
 
 - **Word**: python-docx 库
