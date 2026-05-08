@@ -15,24 +15,26 @@ compiled binary `/home/lxgxdx/gbrain/bin/gbrain` 在某些环境下有 bunfs bug
 
 ### Cron/非交互环境下的正确调用方式
 
-当 cron 或脚本中运行 gbrain 时，PATH 中可能没有 bun。**优先级顺序：**
+**核心问题**：`gbrain` 的 shebang 是 `#!/usr/bin/env bun`，在 cron 环境中 `/usr/bin/env bun` 会失败——因为 cron 的 PATH 不包含 `~/.bun/bin`。
 
-**方案A（最可靠）**：compiled binary `~/gbrain/bin/gbrain`
+**正确方式（2026-05-09 实测成功）**：直接用 bun 路径调用 compiled binary：
 ```bash
-~/gbrain/bin/gbrain doctor --json
-~/gbrain/bin/gbrain embed --stale
-~/gbrain/bin/gbrain stats
-# 注意：compiled binary 在某些环境报 bunfs bug，但2026-04-29 cron实测成功连接数据库
+/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain doctor --json
+/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain embed --stale
 ```
 
-**方案B**：`~/.bun/bin/bun run ~/gbrain/src/cli.ts`
+**原理**：`#!/usr/bin/env bun` 依赖 PATH 中有 bun，而 cron 的最小 PATH 不含 `~/.bun/bin`。直接用绝对路径调用 bun 绕过 shebang 查找。
+
+**旧方案**（仍有效但不需要了）：
 ```bash
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts doctor --json
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale
-# 注意：某些 cron 环境中 ~/.bun/bin/bun 不存在（PATH 中无 bun）
 ```
 
-**2026-04-29 实测**：cron 环境下 `~/.bun/bin/bun` 不存在，但 `~/gbrain/bin/gbrain` doctor/embed 均成功，说明 compiled binary 的 bunfs bug 已在某些环境修复。
+**Compiled binary bunfs bug 状态（2026-05-09 更新）**：
+- 2026-04-19 记录：compiled binary 在 PGLite 模式下报 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`
+- 2026-05-09 实测：compiled binary 完全正常，doctor 和 embed 均成功
+- **结论**：bunfs bug 已在当前环境修复，日常使用可直接用 compiled binary，无需 bun 方式
 
 ### 正确环境变量（cron/非交互shell专用）
 ```bash
