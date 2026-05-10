@@ -31,10 +31,20 @@ compiled binary `/home/lxgxdx/gbrain/bin/gbrain` 在某些环境下有 bunfs bug
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale
 ```
 
-**Compiled binary bunfs bug 状态（2026-05-09 更新）**：
+**Compiled binary bunfs bug 状态（2026-05-09 更新）：**
 - 2026-04-19 记录：compiled binary 在 PGLite 模式下报 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`
-- 2026-05-09 实测：compiled binary 完全正常，doctor 和 embed 均成功
+- 2026-05-09 实测：compiled binary **完全正常**，doctor 和 embed 均成功
+- 2026-05-10 实测：compiled binary **完全正常**，doctor --json 成功（250 pages，health_score 95）
 - **结论**：bunfs bug 已在当前环境修复，日常使用可直接用 compiled binary，无需 bun 方式
+
+**当前环境实测命令（2026-05-10）：**
+```bash
+/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain doctor --json
+# 输出：{"schema_version":2,"status":"warnings","health_score":95,"checks":[
+#   {"name":"resolver_health","status":"warn","message":"Could not find skills directory"},
+#   {"name":"connection","status":"ok","message":"Connected, 250 pages"},  # 从246增长到250
+#   ...]}
+```
 
 ### 正确环境变量（cron/非交互shell专用）
 ```bash

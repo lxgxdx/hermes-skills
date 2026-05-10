@@ -10,6 +10,17 @@ description: 统一战线信息稿工作流。触发词：搜索选题/信息稿
 
 ---
 
+## ⚠️ 微信沟通格式规范（必须遵守）
+
+用户（lxgxdx）明确要求通过微信沟通时：
+- **不用 Markdown 表格** → 用 bullet 列表（`- 项目`）代替
+- **重要内容用加粗** → 用 `**加粗内容**` 
+- **代码块包裹内容可左右滑动** → 表格等复杂内容用三个反引号包裹
+
+这是用户明确表达的沟通偏好，违反会导致信息可读性差。
+
+---
+
 ## 一、每日选题推送
 
 ### 时间
@@ -30,7 +41,7 @@ description: 统一战线信息稿工作流。触发词：搜索选题/信息稿
 ### 搜索方式（定时任务，凌晨执行）
 
 **外网搜索（Searxng 元搜索）**：
-- 地址：`http://localhost:20102`（宿主机端口映射，容器内端口 8080）
+- 地址：`http://localhost:7777`（2026年5月实测可用）
 - 接口：`/search?q=关键词&format=json`
 - ⚠️ **Searxng 服务在 cron 环境下可能返回空结果**（服务临时不可用或连接超时）。处理方式见"7.1 Searxng 返回 0 条结果"段落。
 
@@ -43,7 +54,7 @@ def searxng_search(query, max_results=8):
     注意：必须用 urllib.parse.quote() 编码中文_query_部分，否则中文查询返回 0 条结果。
     同时用 r.get("title", "") 而非 r["title"]，避免 KeyError。
     """
-    base_url = "http://192.168.88.68:8083"
+    base_url = "http://localhost:7777"
     # ⚠️ 关键词部分用 quote() 编码，params 整体用 urlencode() 包装
     params = urllib.parse.urlencode({
         "q": query,          # query 本身已含中文，urlencode 会正确处理
@@ -60,11 +71,12 @@ def searxng_search(query, max_results=8):
 ```
 
 > ⚠️ **Searxng 服务不可用时的兜底策略**：如果 searxng_search() 所有查询均返回空结果（连 `results` 列表都是空的），说明服务本身不可用。此时必须切换到以下兜底方案，不得跳过搜索直接凭记忆编造选题：
-> 1. **直接读取本地已有材料**（见下方"本地材料搜索"）—— 工作总结、范文等 docx 文件中已有大量本地创新做法
-> 2. **外地借鉴选题改为"方法论参考"**：从本地材料中提及的外出考察学习方向（如"赴深圳、潍坊学习"）提炼方法论，不依赖外网搜索
-> 3. **结合领域常识和政策背景补充选题**，确保每个选题有据可查
-> 
-> **验证 Searxng 是否恢复**：手动跑 `curl "http://192.168.88.68:8083/search?q=统一战线&format=json&limit=2"` 看是否返回含 `results` 的 JSON
+> 1. **delegate_task 并行搜索本地 docx**（最高效，见下方"策略A"）—— 工作总结、范文等 docx 文件中已有大量本地创新做法
+> 2. **浏览器 Bing 搜索**（手动获取 URL）：`https://cn.bing.com/search?q=关键词`（百度会弹验证码，Google 会重定向到验证页，Bing 国内版通常可用）
+> 3. **外地借鉴选题改为"方法论参考"**：从本地材料中提及的外出考察学习方向提炼方法论，不依赖外网搜索
+> 4. **结合领域常识和政策背景补充选题**，确保每个选题有据可查
+>
+> **验证 Searxng 是否恢复**：手动跑 `curl "http://localhost:7777/search?q=统一战线&format=json&limit=2"` 看是否返回含 `results` 的 JSON
 
 **本地搜索（两层策略）**：
 
@@ -72,6 +84,48 @@ def searxng_search(query, max_results=8):
 - 搜索 /mnt/nfs/2026年统战工作 目录下的 docx/doc 文件
 - ⚠️ **`search_files` 的 `target=content` 对中文关键词返回 0 结果**（不论 `file_glob` 设什么），这是工具已知局限
 - 因此 `content` 模式只用于英文/拼音搜索；中文搜索改用第二层
+
+**本地素材搜索（两种策略）**：
+
+> ⚠️ **直接用 python-docx 遍历所有 docx 文件**是最高效的方式，比逐个读取更省力。推荐用 `delegate_task` 并行执行大规模 docx 内容扫描。
+
+**策略A（推荐）：delegate_task 并行大规模搜索**
+
+当需要从 /mnt/nfs/2026年统战工作 下挖掘本地素材时，用 delegate_task 并行搜索 docx 内容：
+
+```
+搜索关键字（如"欧美同学会"、"芳华同灼"、"网络人士"等）
+遍历目录 /mnt/nfs/2026年统战工作 下所有 .docx 文件
+排除"已成稿"文件夹
+对每个命中文件，用 python-docx 读取段落文本
+返回：文件名 + 命中段落摘要
+```
+
+示例 prompt（发给 delegate_task）：
+> "Search local docx files under /mnt/nfs/2026年统战工作/ for content related to [TOPIC]. Return which files contain relevant content, key facts/numbers/activities mentioned, and any specific programs or mechanisms described. Focus on meeting plans (配档表), summaries (总结), or work 要点/要点. Ignore files in 已成稿 folder."
+
+delegate_task 的 `max_concurrent_children` 上限为 3，超过会报错。
+
+**策略B：读取 references/known-local-docs.md**
+
+文件中已预先摘录了关键 docx 的内容摘要，优先从这里提取数字和做法，再按需精读原文。
+
+**策略C：直接 python-docx 精读**
+
+针对已知的关键文件路径，用 subprocess 调用 python-docx 读取段落文本：
+
+```python
+import subprocess
+fpath = "/mnt/nfs/2026年统战工作/.../xxx.docx"
+safe = fpath.replace("'", "'\"'\"'")
+result = subprocess.run(
+    ["python3", "-c",
+     f"import docx; doc=docx.Document('{safe}'); "
+     f"[print(p.text.strip()) for p in doc.paragraphs if p.text.strip()]"],
+    capture_output=True, text=True, timeout=30
+)
+print(result.stdout)
+```
 
 **第二层：python-docx 直接读取内容**
 - 定位到具体文件后，用 python-docx 直接读取段落文本进行内容分析
@@ -437,6 +491,7 @@ with urllib.request.urlopen(req) as resp:
 | **本地重要文档清单** | `references/known-local-docs.md`（本 skill 目录，含关键文件路径+内容摘要+数字备忘） |
 | **选题排重规则** | `references/选题排重规则.md`（已刊发稿件禁止关键词 + 近3天每日选题记录 + 5月未挖掘方向清单；每次经验类 cron 必须读取） |
 | **当月选题线索汇总** | `8.信息工作/范文/2026年/4月/4月份下半月信息宣传选题汇总.docx` — 各联络员自提选题草稿，含白鹭湾打卡点、侨联读书日、张雪机车、基层新阶层、网络统战等方向；是本地选题最直接的来源 |
+| **公众号内容制作（HTML截图方案）** | `references/公众号内容制作.md` — AI生图随机性高，用HTML+Chrome截图代替；包含标准工作流、配色模板、MiniMax API备选方案 |
 
 ---
 
@@ -535,10 +590,10 @@ with urllib.request.urlopen(req) as resp:
 ### 关键本地文件清单（经验类 cron 必读）
 
 ### 7.1 Searxng 返回 0 条结果
-- **检查 JSON 格式**：先跑 `curl "http://192.168.88.68:8083/search?q=统一战线&format=json&limit=2"` 看返回是否含 `results` 数组
+- **检查 JSON 格式**：先跑 `curl "http://localhost:7777/search?q=统一战线&format=json&limit=2"` 看返回是否含 `results` 数组
 - **中文编码**：Python 中 query 字符串整体用 `urllib.parse.urlencode({"q": query, ...})` 编码，quote 只用于 URL 路径参数而非整段查询；Searxng 元搜索对 URL 编码格式敏感
 - **确认 `search.formats` 包含 `json`**：配置文件 `/mnt/user/appdata/searxng/settings.yml`，必须在 `search.formats` 中加入 `json`，否则 JSON API 返回 403
-- 容器内端口 8080，映射到宿主机 8083
+- **Searxng 容器端口**：容器内 8080，2026年5月实测通过 `localhost:7777` 映射可达
 - 容器重启命令（在 Unraid 上）：`docker restart searxng`
 - **全部查询都返回空**：执行 curl 验证后仍无 `results`，说明服务不可用，切换到兜底策略（见上方"搜索方式"中的 Searxng 不可用兜底策略）
 

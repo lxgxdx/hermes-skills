@@ -572,6 +572,23 @@ ls ~/.hermes/skills/
 
 **This is a known gap** — user skills via `hermes skills install` go to `~/.hermes/skills/` but Hermes does not read them from there. Track upstream fix at: https://github.com/NousResearch/hermes-agent/issues
 
+### Community Skills Installation — URL Format Bug
+
+**Symptom:** Installing a community skill from GitHub (e.g. `hermes skills install https://github.com/user/repo/blob/main/skills/skill/SKILL.md`) produces a skill whose content is entirely HTML (`<!DOCTYPE html>`).
+
+**Root cause:** GitHub's `blob/main/` URL returns an HTML page, not raw markdown. `hermes skills install` does not automatically convert to raw content.
+
+**Fix:** Use `raw.githubusercontent.com` URLs:
+```
+hermes skills install https://raw.githubusercontent.com/ConardLi/garden-skills/main/skills/gpt-image-2/SKILL.md --force --yes
+```
+
+See `references/garden-skills-install-pitfall.md` for full details including gpt-image-2 image-generation setup.
+
+### Skills Not Auto-Discovered（用户 Skills 不自动加载）
+
+用户通过 `hermes skills install` 安装的技能位于 `~/.hermes/skills/`，但 Hermes 默认只从 `~/.hermes/hermes-agent/skills/`（内置）自动发现技能。用户 skills 不会在 session 中自动加载，除非手动 `/skill <name>` 或设置 `HERMES_AGENT_REPO=~/.hermes`。详见 `references/garden-skills-install-pitfall.md`。
+
 ### Gateway issues
 Check logs first:
 ```bash
@@ -583,6 +600,27 @@ Common gateway problems:
 - **Gateway dies on SSH logout**: Enable linger: `sudo loginctl enable-linger $USER`
 - **Gateway dies on WSL2 close**: WSL2 requires `systemd=true` in `/etc/wsl.conf` for systemd services to work. Without it, gateway falls back to `nohup` (dies when session closes).
 - **Gateway crash loop**: Reset the failed state: `systemctl --user reset-failed hermes-gateway`
+
+### 查看 Hermes 更新内容
+
+**方法：** 直接查 git log 获取版本更新记录：
+
+```bash
+cd ~/.hermes/hermes-agent && git log --oneline -20
+```
+
+**输出示例（2026-05-09）：**
+```
+a7e7921db fix(tui): trim markdown wrap spaces (#22062)          ← 最近
+78b0008f4 fix(gateway): also catch restart TimeoutExpired
+0ec052ca2 perf(cli): cut ~19s from 'hermes' cold start (#22138) ← 重要性能优化
+```
+
+**解读：** 每条格式为 `commit hash type(scope): short description (#PR号)`
+
+常见 type：feat（新功能）、fix（修复）、perf（性能）、docs（文档）、chore（基建）
+
+用户问"Hermes有更新吗/更新了什么"时，用 git log 直接查是最准确的方式。
 
 ### Gateway Zombie Process Recovery
 

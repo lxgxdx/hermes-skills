@@ -1,1 +1,73 @@
-{"version": 1, "installed": {}}
+{
+  "version": 1,
+  "installed": {
+    "kb-retriever": {
+      "source": "url",
+      "identifier": "https://github.com/ConardLi/garden-skills/blob/main/skills/kb-retriever/SKILL.md",
+      "trust_level": "community",
+      "scan_verdict": "caution",
+      "content_hash": "sha256:2196dfa8f7a6de58",
+      "install_path": "productivity/kb-retriever",
+      "files": [
+        "SKILL.md"
+      ],
+      "metadata": {
+        "url": "https://github.com/ConardLi/garden-skills/blob/main/skills/kb-retriever/SKILL.md",
+        "awaiting_name": false
+      },
+      "installed_at": "2026-05-09T06:16:53.447349+00:00",
+      "updated_at": "2026-05-09T06:16:53.447356+00:00"
+    },
+    "gpt-image-2": {
+      "source": "url",
+      "identifier": "https://github.com/ConardLi/garden-skills/blob/main/skills/gpt-image-2/SKILL.md",
+      "trust_level": "community",
+      "scan_verdict": "caution",
+      "content_hash": "sha256:ac2a4ecad003ebd3",
+      "install_path": "creative/gpt-image-2",
+      "files": [
+        "SKILL.md"
+      ],
+      "metadata": {
+        "url": "https://github.com/ConardLi/garden-skills/blob/main/skills/gpt-image-2/SKILL.md",
+        "awaiting_name": false
+      },
+      "installed_at": "2026-05-09T06:17:40.906977+00:00",
+      "updated_at": "2026-05-09T06:17:40.906999+00:00"
+    },
+    "web-design-engineer": {
+      "source": "url",
+      "identifier": "https://github.com/ConardLi/garden-skills/blob/main/skills/web-design-engineer/SKILL.md",
+      "trust_level": "community",
+      "scan_verdict": "caution",
+      "content_hash": "sha256:a063bba634c01d99",
+      "install_path": "creative/web-design-engineer",
+      "files": [
+        "SKILL.md"
+      ],
+      "metadata": {
+        "url": "https://github.com/ConardLi/garden-skills/blob/main/skills/web-design-engineer/SKILL.md",
+        "awaiting_name": false
+      },
+      "installed_at": "2026-05-09T06:18:15.363841+00:00",
+      "updated_at": "2026-05-09T06:18:15.363863+00:00"
+    },
+    "web-video-presentation": {
+      "source": "url",
+      "identifier": "https://github.com/ConardLi/garden-skills/blob/main/skills/web-video-presentation/SKILL.md",
+      "trust_level": "community",
+      "scan_verdict": "caution",
+      "content_hash": "sha256:9b56729b21f99fb7",
+      "install_path": "creative/web-video-presentation",
+      "files": [
+        "SKILL.md"
+      ],
+      "metadata": {
+        "url": "https://github.com/ConardLi/garden-skills/blob/main/skills/web-video-presentation/SKILL.md",
+        "awaiting_name": false
+      },
+      "installed_at": "2026-05-09T06:18:41.068221+00:00",
+      "updated_at": "2026-05-09T06:18:41.068243+00:00"
+    }
+  }
+}

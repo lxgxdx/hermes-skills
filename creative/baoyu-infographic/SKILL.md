@@ -4,6 +4,7 @@ description: "Infographics: 21 layouts x 21 styles (信息图, 可视化)."
 version: 1.56.1
 author: 宝玉 (JimLiu)
 license: MIT
+platforms: [linux, macos, windows]
 metadata:
   hermes:
     tags: [infographic, visual-summary, creative, image-generation]
@@ -226,6 +227,7 @@ Report: topic, layout, style, aspect, language, output path, files created.
 - `references/base-prompt.md` — Prompt template
 - `references/layouts/<layout>.md` — 21 layout definitions
 - `references/styles/<style>.md` — 21 style definitions
+- `references/minimax-image-api.md` — MiniMax CN image-01 API（当 `image_generate` 工具未配置 FAL_KEY 时，使用此方法直接调用 MiniMax 图像生成）
 
 ## Pitfalls
 

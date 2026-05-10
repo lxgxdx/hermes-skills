@@ -1,8 +1,8 @@
 {
-  "last_report_path": null,
-  "last_run_at": "2026-05-02T13:22:20.470441+00:00",
-  "last_run_duration_seconds": null,
-  "last_run_summary": "deferred first run — curator seeded, will run after one interval; use `hermes curator run --dry-run` to preview now",
+  "last_report_path": "/home/lxgxdx/.hermes/logs/curator/20260509-141011",
+  "last_run_at": "2026-05-09T14:10:11.672260+00:00",
+  "last_run_duration_seconds": 8.132438,
+  "last_run_summary": "auto: no changes; llm: skipped (no candidates)",
   "paused": false,
-  "run_count": 0
+  "run_count": 1
 }
