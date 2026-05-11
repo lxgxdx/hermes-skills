@@ -319,7 +319,23 @@ Type these during an interactive chat session.
 ~/.hermes/logs/             Gateway and error logs
 ~/.hermes/auth.json         OAuth tokens and credential pools
 ~/.hermes/hermes-agent/     Source code (if git-installed)
+~/.hermes/memories/         User profile (USER.md) and session memory (MEMORY.md)
 ```
+
+### 用户 lxgxdx 的关键配置
+
+| 项目 | 值 | 说明 |
+|------|-----|------|
+| **飞书 ID** | `oc_7c656031826c26b15f17d010097f3619` | 主通知渠道 |
+| **Telegram ID** | `5927500943` | 备用通知渠道 |
+| **TZB 路径** | `/mnt/nfs/2026年统战工作/` | 统战部工作文件根目录 |
+| **Home Assistant** | `192.168.88.183:8123`（只读） | 智能家居 |
+| **Unraid IP** | `192.168.88.68` | 服务器 |
+| **Tesla P4** | **8GB** Pascal（不是4GB！） | GPU |
+| **GBrain CLI** | `~/.bun/bin/bun run ~/gbrain/src/cli.ts` | 必须 bun run |
+| **memory 工具** | ❌ 当前不可用 | 改用直接写文件到 `~/.hermes/memories/` |
+
+> ⚠️ **已知用户纠正记录**：用户纠正过——Tesla P4是8GB不是4GB；GBrain CLI必须用`bun run`；AI必须叫Hermes。
 
 Profiles use `~/.hermes/profiles/<name>/` with the same layout.
 
@@ -600,6 +616,44 @@ Common gateway problems:
 - **Gateway dies on SSH logout**: Enable linger: `sudo loginctl enable-linger $USER`
 - **Gateway dies on WSL2 close**: WSL2 requires `systemd=true` in `/etc/wsl.conf` for systemd services to work. Without it, gateway falls back to `nohup` (dies when session closes).
 - **Gateway crash loop**: Reset the failed state: `systemctl --user reset-failed hermes-gateway`
+
+### Skills Hub — 搜索和安装社区 Skills
+
+Hermes 内置了多源 Skills 搜索，功能等同于 Claude Code 的 `find-skill`：
+
+```bash
+# 搜索社区 Skills（支持多数据源并行查询）
+hermes skills search <关键词>
+
+# 示例：搜微信公众号相关 Skills
+hermes skills search wechat
+hermes skills search "public account"
+
+# 列出所有数据源
+hermes skills sources
+
+# 预览（不安装）
+hermes skills inspect <skill-id>
+
+# 安装
+hermes skills install <skill-id>
+
+# 从指定 GitHub 仓库安装
+hermes skills tap add https://github.com/user/repo
+hermes skills search <keyword>  # 然后安装
+```
+
+**内置数据源：**
+- `clawhub.ai` — 社区 Skills 市场
+- `lobehub` — LobeHub agents 索引
+- GitHub — 任意公开仓库
+
+**与 Claude Code `find-skill` 的区别：**
+- Hermes 用 `hermes skills search`（内置，无需安装）
+- Claude Code 用 `find-skill` skill（外部安装，4800+ skills，来自14个源）
+- 两者功能等价，Hermes 内置方案更简洁
+
+**参考：** `references/hermes-skills-hub-sources.md` — 包含 unified_search 源码分析和各数据源详细说明
 
 ### 查看 Hermes 更新内容
 

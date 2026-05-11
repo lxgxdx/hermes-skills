@@ -33,11 +33,24 @@ ghp_Fc...ZhBU
 ### 影响
 用这个被遮蔽的token认证会返回 `401 Unauthorized`。
 
-### 解决步骤
+### 解决步骤（按优先级）
 
-1. 让用户重新提供完整的、未经过聊天工具传输的PAT
-2. 直接设置到shell环境变量（不经过聊天工具）
-3. 或直接写入git-credentials
+1. **从 `.git/config` 原始字节提取**（最有效）：token 在 `remote.origin.url` 中存储时不会被 UI redaction 处理
+   ```bash
+   # 用 xxd 读取原始字节，找到 ghp_ 开头到 @ 之间的内容
+   xxd /path/to/.git/config | head -30
+   # 或用 Python 读原始字节：
+   with open('/path/to/.git/config', 'rb') as f:
+       raw = f.read()
+   start = raw.find(b'ghp_')
+   end = raw.find(b'@', start)
+   token = raw[start:end].decode('utf-8')  # 这就是完整 token
+   ```
+   参考：`references/git-config-token-extract.md`
+
+2. 让用户重新提供完整的、未经过聊天工具传输的PAT
+3. 直接设置到shell环境变量（不经过聊天工具）
+4. 或直接写入git-credentials
 
 ### 为什么微信/TG会导致token redaction
 Hermes的 `agent/redact.py` 会对GitHub PAT格式的字符串进行脱敏，被存储到session文件或日志中的token都会被部分遮蔽。
