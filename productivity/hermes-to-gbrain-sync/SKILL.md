@@ -25,7 +25,8 @@ GBrain (向量化存储到 PGLite)
 
 **必需命令：** `python3`, `bun`
 **必需Python库：** `sqlite3`（内置）, `subprocess`（内置）, `pathlib`（内置）
-**环境变量：** `SILICONFLOW_API_KEY`（硅基流动API key，用于embedding）
+**环境变量：** `EMBEDDING_BASE_URL=http://192.168.88.68:8081`（本地 Infinity，用于 embedding；SiliconFlow 已废弃）
+**GBrain CLI 路径：** `/home/lxgxdx/.bun/bin/bun run /home/lxgxdx/gbrain/src/cli.ts`
 **运行方式：** 直接运行脚本，或通过 cron 自动触发
 
 ---
@@ -98,7 +99,9 @@ compiled binary 有 bunfs bug，直接运行会报 `ENOENT: no such file or dire
 ### 步骤1：查询当天会话
 
 **输入：** Hermes state.db
-**输出：** 当天所有 weixin/telegram 会话列表
+**输出：** 当天所有平台会话列表
+
+**⚠️ 重要：** 当前 sync-conversations-to-brain.py 只同步 `weixin` 和 `telegram`，**飞书（feishu）不在同步范围内**。这是已知缺口，日报汇总时应直接从 state.db 补充读取飞书对话。
 
 ```python
 import sqlite3
@@ -109,10 +112,11 @@ conn = sqlite3.connect(db_path)
 cur = conn.cursor()
 
 today_start = dt.now().replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+# 包含所有平台：weixin, telegram, feishu, cli
 cur.execute("""
-    SELECT id, source, user_id, started_at 
-    FROM sessions 
-    WHERE started_at >= ? AND source IN ('weixin', 'telegram')
+    SELECT id, source, user_id, started_at
+    FROM sessions
+    WHERE started_at >= ? AND source IN ('weixin', 'telegram', 'feishu', 'cli')
     ORDER BY started_at ASC
 """, (today_start,))
 sessions = cur.fetchall()
@@ -181,11 +185,11 @@ rc, stdout, stderr = gbrain_run(['put', slug], input_text=content)
 ---
 type: conversation
 title: "对话摘要（首个用户消息的前80字）"
-platform: 微信/Telegram
+platform: 飞书/微信/Telegram/CLI
 date: 2026-04-17
 tags:
   - daily-log
-  - weixin
+  - feishu|weixin|telegram|cli
 ---
 
 ## 对话摘要
@@ -198,7 +202,7 @@ tags:
 
 ## 元数据
 
-- 平台：微信/Telegram
+- 平台：飞书/微信/Telegram/CLI
 - 用户ID：xxx 或 未知
 - 会话ID：session_id
 ```
@@ -227,6 +231,19 @@ tags:
 
 - **hourly-conversation-sync**：`0 * * * *`（每小时同步一次当天对话）
 - **nightly-dream-cycle**：`0 2 * * *`（每天2AM维护 brain 健康）
+
+## ⚠️ 与每日工作日志（daily-work-log）的关系
+
+**数据流：**
+```
+Hermes state.db（所有平台：飞书/微信/TG）
+    → sync-conversations-to-brain.py（每天 20:00 自动同步）
+    → GBrain conversations/YYYY-MM-DD-* 页面
+    → daily-work-log cron（每天 22:00 汇总）
+    → GBrain daily/YYYY-MM-DD 页面
+```
+
+**时序注意：** sync 在 20:00，日报在 22:00。20:00 之后新开的 session 会被第二天的 sync（20:00）同步走后，第三天 22:00 的日报才能汇总到。日报 cron 在总结前会扩大搜索范围查当天所有 conversation，不完全依赖 sync 时间点。
 
 ---
 

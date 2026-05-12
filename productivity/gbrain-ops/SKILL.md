@@ -5,6 +5,23 @@ description: GBrain 个人知识库操作手册。涵盖 gbrain put 必须通过
 
 # GBrain Operations Guide
 
+## 核心原则：主动同步（Auto-Sync）
+
+**这是最重要的使用原则：**
+
+- 对话中出现**重要决策、方案、偏好、修正**时，当前 session 结束前必须同步到 GBrain
+- 触发同步的场景：
+  - 用户纠正了我的工作流程/格式/偏好（"不是说过不要XXX吗"）
+  - 发现新的工具技巧、绕过方法、调试路径
+  - 创建了新 Skill / 修改了现有 Skill
+  - 重要约定（"有deadline要主动汇报"）
+  - 非 trivial 的问题解决方案
+- **不要等用户要求** — 这是 Agent 的主动行为
+- 同步位置：`~/.bun/bin/bun run ~/gbrain/src/cli.ts put <slug> --stdin`
+- slug 命名：简洁描述性，如 `ppt-master-upgrade-2026-05`、`hermes-wechat-bug-fix`
+
+**为什么**：memory 只在当前 session 有效，跨 session 会话丢失。GBrain 是持久化的，跨 session 可查。
+
 ## 基本命令（2026-04-17）
 
 所有命令使用：`bun run ~/gbrain/src/cli.ts <cmd>`
@@ -51,10 +68,36 @@ compiled binary `/home/lxgxdx/gbrain/bin/gbrain` 在某些环境下有 bunfs bug
 HOME=/home/lxgxdx
 BUN_INSTALL="$HOME/.bun"          # 非交互环境必须显式设置
 PATH="$BUN_INSTALL/bin:$PATH"      # bun 不在默认 PATH 中
-EMBEDDING_BASE_URL=http://192.168.88.68:8081   # 本地 Infinity（Unraid Tesla P4）
-USE_LOCAL_INFINITY=1
 ```
-**注意**：这些变量必须存在于 shell 环境中，`.env` 文件不会自动加载。
+**注意**：这些变量必须存在于 shell 环境中。
+
+### ⚠️ 关键：SiliconFlow 已失效，永久修复是改源码 fallback
+
+**根因**：SiliconFlow API Token 失效（`"Invalid token"`），GBrain 所有 embedding 失败。
+
+**正确修复（永久）**：修改 `embedding.ts` 源码的默认 fallback URL，不再依赖任何外部云服务：
+
+```bash
+# 修改 fallback URL（之前是 api.siliconflow.cn，永久改为本地 Infinity）
+vim ~/gbrain/src/core/embedding.ts
+# 改第16行：
+# 之前: return process.env.EMBEDDING_BASE_URL || 'https://api.siliconflow.cn/v1';
+# 之后: return process.env.EMBEDDING_BASE_URL || 'http://192.168.88.68:8081';
+```
+
+**环境变量方式（临时绕过）**：如果不方便改源码，写入 `~/.hermes/.env`：
+```bash
+echo "EMBEDDING_BASE_URL=http://192.168.88.68:8081" >> ~/.hermes/.env
+```
+注意：`gbrain config set` 不会影响 embedding 请求目标（bug），必须用 `.env`。
+
+**验证**：
+```bash
+~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --slugs hermes-config
+# hermes-config: all 1 chunks already embedded ✅
+```
+
+本地 Infinity（Unraid Tesla P4）：`http://192.168.88.68:8081`（BAAI/bge-m3，1024维）已验证正常。
 
 ### 正确命令
 ```bash
@@ -646,6 +689,8 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `doctor --json` resolver_health 10 warnings | 9个 DRY violations（skill 内联 conventions/quality.md 规则）+ 1个 MECE overlap（maintain↔citation-fixer）| 不影响核心功能；修复：在 RESOLVER.md 添加 disambiguation rule 或 narrow skill triggers |
 | `doctor --fast` 报 resolver_health MECE_OVERLAP/DRY_VIOLATION warnings | skills 内部有重复规则和分类重叠，属于设计问题 | 不影响核心功能，可忽略；如需修复在 RESOLVER.md 添加 disambiguation |
 | `doctor --fast` 只做文件系统检查，不测数据库 | 2026-04-20 cron 实测：即使 Postgres 连不上，仍返回 90/100 并显示 resolver_health warnings | 验证数据库真实连接用 `gbrain stats`；`doctor --fast` 只检查 skills 文件系统完整性 |
+| `gbrain put/embed --stale` 报 "Embedding request failed: 404 Not Found" | SiliconFlow token 失效（"Invalid token"） | **永久修复**：改 `~/gbrain/src/core/embedding.ts` 第16行 fallback URL 为 `http://192.168.88.68:8081`；临时绕过：写入 `EMBEDDING_BASE_URL=http://192.168.88.68:8081` 到 `~/.hermes/.env`（`config set` 不生效）；详见 `references/gbrain-embedding-siliconflow-invalid-2026-05-12.md` |
+| `config set EMBEDDING_BASE_URL` 不生效 | `config set` 不影响 embedding 请求目标 | 必须写入 `~/.hermes/.env`，详见上方参考文件 |
 | `gbrain put` 超时（30s+） | Schema vector(1536) 与 BAAI/bge-m3 输出 1024 维不匹配 | 修改 schema 文件 `vector(1536)` → `vector(1024)`，重建数据库 |
 | `embed --stale` 显示 "0 chunks embedded" | 同上，嵌入维度不匹配 | 同上 |
 | `cat | bun` 报 "approval_required" | 触发 Pipe to interpreter 安全扫描 | 用文件重定向代替管道：`bun run ... < /tmp/file.md` |
