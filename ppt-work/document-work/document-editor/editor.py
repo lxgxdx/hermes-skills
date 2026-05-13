@@ -120,18 +120,22 @@ class WordDocumentEditor:
         
         return p
     
-    def add_paragraph(self, text, font_name=None, font_size=None, 
+    def add_paragraph(self, text, font_name=None, font_size=None,
                      align=None, bold=False, first_line_indent=None,
                      line_spacing=None, space_before=0, space_after=0):
         """
         添加正文段落
-        
+
         默认格式（公文标准）：
         - 字体：仿宋_GB2312
         - 字号：三号（15磅）
         - 对齐：两端对齐
         - 首行缩进：2字符
         - 行距：固定28磅
+
+        ⚠️ **字号必须传 Pt() 对象**：font_size 必须用 docx.shared.Pt(16) 传入，
+          传整数（如 16）会导致 OOXML 以 EMU 解析，字号显示极小。
+        ⚠️ **行距必须传 Pt() 对象**：line_spacing 同理。
         """
         p = self.doc.add_paragraph()
         run = p.add_run(text)
@@ -145,6 +149,8 @@ class WordDocumentEditor:
         run.font.name = font_name
         run.font.size = font_size
         run.font.bold = bold
+        # ⚠️ 必须同时设置 w:eastAsia，否则 Windows Word 以默认字体(Cambria)渲染中文，显示为方块/问号
+        run._element.rPr.rFonts.set(qn('w:eastAsia'), font_name)
         
         # 对齐方式
         if align is None:

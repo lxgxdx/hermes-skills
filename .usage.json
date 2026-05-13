@@ -4,12 +4,12 @@
     "created_at": "2026-05-12T04:30:09.554552+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-12T18:03:46.792180+00:00",
-    "last_used_at": "2026-05-12T18:03:48.997036+00:00",
+    "last_used_at": "2026-05-13T16:00:14.072816+00:00",
     "last_viewed_at": "2026-05-12T18:03:48.985131+00:00",
     "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 4,
+    "use_count": 5,
     "view_count": 3
   },
   "doc-file-conversion": {
@@ -27,14 +27,14 @@
   "document-editor": {
     "archived_at": null,
     "created_at": "2026-05-06T08:56:58.239494+00:00",
-    "last_patched_at": "2026-05-06T09:13:25.550759+00:00",
-    "last_used_at": "2026-05-06T09:21:35.131082+00:00",
-    "last_viewed_at": "2026-05-06T09:21:35.127394+00:00",
-    "patch_count": 1,
+    "last_patched_at": "2026-05-13T12:06:50.300669+00:00",
+    "last_used_at": "2026-05-13T12:10:51.716757+00:00",
+    "last_viewed_at": "2026-05-13T12:10:51.706068+00:00",
+    "patch_count": 6,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 8,
+    "view_count": 8
   },
   "easyocr-unraid-p4-deploy": {
     "archived_at": null,
@@ -113,24 +113,37 @@
     "archived_at": null,
     "created_at": "2026-05-08T09:07:47.884214+00:00",
     "last_patched_at": "2026-05-09T18:07:06.678743+00:00",
-    "last_used_at": "2026-05-12T12:00:49.993532+00:00",
+    "last_used_at": "2026-05-13T12:00:18.102697+00:00",
     "last_viewed_at": "2026-05-11T18:09:13.246168+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 8,
+    "use_count": 9,
     "view_count": 4
   },
   "llm-wiki-build": {
     "archived_at": null,
     "created_at": "2026-05-06T18:02:56.374398+00:00",
     "last_patched_at": "2026-05-06T18:03:21.995516+00:00",
-    "last_used_at": "2026-05-12T18:00:35.541837+00:00",
+    "last_used_at": "2026-05-13T18:00:34.757425+00:00",
     "last_viewed_at": "2026-05-06T18:02:56.374427+00:00",
     "patch_count": 3,
     "pinned": false,
     "state": "active",
-    "use_count": 5,
+    "use_count": 6,
+    "view_count": 1
+  },
+  "novel-writing-agent": {
+    "archived_at": null,
+    "created_at": "2026-05-13T16:36:21.281540+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-05-13T16:36:21.288362+00:00",
+    "last_viewed_at": "2026-05-13T16:36:21.281562+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
     "view_count": 1
   },
   "ppt-master": {
@@ -160,14 +173,14 @@
   "ppt-master-usage": {
     "archived_at": null,
     "created_at": "2026-05-03T10:11:12.306517+00:00",
-    "last_patched_at": "2026-05-06T10:35:26.874763+00:00",
-    "last_used_at": "2026-05-11T11:06:31.928210+00:00",
-    "last_viewed_at": "2026-05-11T11:06:31.917914+00:00",
-    "patch_count": 13,
+    "last_patched_at": "2026-05-13T11:31:27.032710+00:00",
+    "last_used_at": "2026-05-13T11:31:09.734586+00:00",
+    "last_viewed_at": "2026-05-13T11:31:09.725235+00:00",
+    "patch_count": 14,
     "pinned": false,
     "state": "active",
-    "use_count": 14,
-    "view_count": 14
+    "use_count": 15,
+    "view_count": 15
   },
   "pptx-animation": {
     "archived_at": null,
@@ -185,25 +198,25 @@
     "archived_at": null,
     "created_at": "2026-05-08T03:34:10.112257+00:00",
     "last_patched_at": null,
-    "last_used_at": "2026-05-08T03:34:10.119994+00:00",
-    "last_viewed_at": "2026-05-08T03:34:10.112275+00:00",
+    "last_used_at": "2026-05-13T18:04:48.332005+00:00",
+    "last_viewed_at": "2026-05-13T18:04:48.325980+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "tongzhan-info-workflow": {
     "archived_at": null,
     "created_at": "2026-05-03T17:04:25.564838+00:00",
-    "last_patched_at": "2026-05-11T18:08:55.632858+00:00",
-    "last_used_at": "2026-05-12T18:01:56.100176+00:00",
-    "last_viewed_at": "2026-05-12T18:01:56.094191+00:00",
-    "patch_count": 40,
+    "last_patched_at": "2026-05-13T18:07:13.229165+00:00",
+    "last_used_at": "2026-05-13T18:05:23.726084+00:00",
+    "last_viewed_at": "2026-05-13T18:05:23.711649+00:00",
+    "patch_count": 76,
     "pinned": false,
     "state": "active",
-    "use_count": 32,
-    "view_count": 32
+    "use_count": 67,
+    "view_count": 67
   },
   "tz-file-organizer": {
     "archived_at": null,

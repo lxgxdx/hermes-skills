@@ -206,6 +206,33 @@ editor.add_paragraph(
 
 ## 实际应用场景
 
+### 经验类信息稿（快速模板）
+> 完整格式参数见 `references/经验类信息稿格式.md`
+
+```python
+import sys
+sys.path.insert(0, '/home/lxgxdx/.hermes/skills/ppt-work/document-work/document-editor')
+from editor import WordDocumentEditor
+from docx.shared import Pt  # ⚠️ 必须导入，否则字号不生效
+
+editor = WordDocumentEditor()
+editor.set_page_setup(top=3.5, bottom=3.2, left=2.7, right=2.7)
+
+# 标题：黑体三号（16pt）
+editor.add_paragraph('标题', font_name='黑体', font_size=Pt(16), bold=True, align='center')
+
+# 正文：仿宋三号，首行缩进，28磅行距
+for para in ['第1段...', '第2段...']:
+    editor.add_paragraph(para, font_name='仿宋_GB2312', font_size=Pt(16),
+                         bold=False, align='justify', first_line_indent=True, line_spacing=Pt(28))
+
+editor.save('output.docx')
+```
+
+> ⚠️ **`font_size` 和 `line_spacing` 必须用 `Pt()` 对象传入**，不能用整数。传整数会导致字号变成 `inherit`（极小），文档看起来像空白。
+>
+> ⚠️ **中文字体必须双重指定**：`run.font.name='仿宋'` 只控制西文字体，必须同时设置 `run._element.rPr.rFonts.set(qn('w:eastAsia'), '仿宋')` 才能让 Windows Word 正确渲染中文。`editor.add_paragraph()` 已自动处理此问题（2026-05-13修复），但裸写 python-docx 时必须手动添加。
+
 ### 场景1：制作正式公文
 ```python
 editor = WordDocumentEditor()
@@ -265,7 +292,23 @@ editor.save("工资表.xlsx")
 
 ## 常见问题
 
-### python-docx 中文 Unicode 腐败问题
+### 坑2：execute_code sandbox 不接受中文
+
+**问题**：`execute_code` 的多行字符串传中文会报 `SyntaxError: invalid character`，原因是 sandbox 解析器对中文字符和中文标点（如`""`中文引号、`、``。`）直接拒绝。
+
+**正确做法**：
+1. 用 `write_file` 将完整 `.py` 文件写入 `/tmp/`（含 UTF-8 中文原文字符串）
+2. 用 `terminal` 运行：`python3 /tmp/gw_format.py`
+
+```python
+# 错误 ❌ — execute_code 多行字符串
+"""
+editor.add_paragraph("五莲县...", font_name='黑体')
+"""
+
+# 正确 ✅ — write_file 到 .py 文件，再用 terminal 运行
+# write_file path=/tmp/gw_format.py → terminal python3 /tmp/gw_format.py
+```
 
 **问题现象**：向 WordDocumentEditor 传入中文时，某些字符被静默替换为相似字：
 - `\u83B2`（莲）→ 莱

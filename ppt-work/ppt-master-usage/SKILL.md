@@ -51,39 +51,25 @@ ${PYTHON} ${SKILL_DIR}/scripts/project_manager.py import-sources <项目路径> 
 
 **Step 7: 后处理三步（必须顺序执行，不能跳过）**
 ```bash
-# ⚠️ 先 cd 到 scripts 父目录（SKILL_DIR/scripts/ 不在 PATH 中）
-cd ~/ppt-master/skills/ppt-master
+# ⚠️ 先 cd 到 ppt-master 目录
+cd ~/ppt-master
 
 # Step 7.1: 分割讲稿为分页备注
-python scripts/total_md_split.py <项目路径>
+python skills/ppt-master/scripts/total_md_split.py <项目路径>
 
 # Step 7.2: SVG后处理（图标嵌入/图片裁剪/文字扁平化/圆角转路径）
-python scripts/finalize_svg.py <项目路径>
+python skills/ppt-master/scripts/finalize_svg.py <项目路径>
 
-# Step 7.3: 导出PPTX（--no-notes 禁用自动备注嵌入；默认 -s svg_output）
-python scripts/svg_to_pptx.py <项目路径> -s svg_output -o <输出路径>
-```
-
-**⚠️ 重要：`svg_to_pptx.py` 位置和用法**
-- 正确路径：`~/ppt-master/skills/ppt-master/scripts/svg_to_pptx.py`
-- **不需要** `cd ~/ppt-master`（那是项目目录，不是脚本目录）
-- 默认 `-s svg_output`（从 svg_output/ 导出），不需要强制 `-s final`
-- **自动嵌入备注**：`total_md_split.py` 生成的 `notes/*.md` 会自动注入为每页演讲者备注
-- 若要手动控制备注（如精修内容），用 python-pptx 事后写入：
-  ```python
-  from pptx import Presentation
-  prs = Presentation("output.pptx")
-  for i, slide in enumerate(prs.slides):
-      notes = slide.notes_slide.notes_text_frame
-      notes.text = read_note_content(i)  # 自定义逻辑
-  prs.save("output_with_notes.pptx")
-  ```
+# Step 7.3: 导出PPTX
+# ⚠️ 用 -s svg_output（从 svg_output/ 导出），不是 -s final
+python skills/ppt-master/scripts/svg_to_pptx.py <项目路径> -s svg_output -o <输出路径>
 ```
 
 **⚠️ 绝不能跳过的关键节点：**
 1. **Step 4（Strategist）— BLOCKING**: 八项确认必须等用户确认，确认前不能生成任何SVG
 2. **finalize_svg.py** 绝对不能跳过
 3. 后处理三步必须顺序执行，不能合并
+4. 导出用 `-s svg_output`（从 svg_output/ 而非 svg_final/，这是正确参数）
 4. 导出必须用 `-s final`（从 svg_final/ 而非 svg_output/）
 
 ---

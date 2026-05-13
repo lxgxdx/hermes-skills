@@ -357,6 +357,53 @@ When fixing bugs:
 
 ## Appendix: Hermes Gateway-Specific Debugging
 
+### 6. Python F-String Operator Precedence Bug with `None` Values
+
+**Symptom:** Script crashes with `AttributeError: 'NoneType' object has no attribute 'upper'`
+on a line like:
+```python
+f"Issue状态: {issue['state'].upper() if issue else 'N/A'}"
+```
+
+**Root cause:** Python's f-string substitution is parsed left-to-right. The ternary `if/else`
+has lower precedence than subscripting, so `issue['state']` is evaluated BEFORE the `if issue`
+check. When `issue` is `None`, `None['state']` raises `AttributeError` before the ternary
+can return `'N/A'`.
+
+**Wrong patterns:**
+```python
+# ❌ issue['state'] evaluated before ternary — crashes when issue is None
+f"{issue['state'].upper() if issue else 'N/A'}"
+
+# ❌ issue.get('state', '') on a None object — None has no .get()
+f"{issue.get('state', '').upper() if issue else 'N/A'}"
+```
+
+**Correct patterns:**
+```python
+# ✅ Short-circuit: dict.get() on a real dict, '' if None
+f"{(issue.get('state', '') or '').upper() if issue else 'N/A'}"
+
+# ✅ Explicit double-check: both issue truthy AND has the key
+f"{issue['state'].upper() if issue and issue.get('state') else 'N/A'}"
+
+# ✅ Safest for mixed None/key-missing cases
+issue_state = (issue.get('state', '') or '').upper() if issue else 'N/A'
+f"Issue状态: {issue_state}"
+```
+
+**Same issue applies to:** dict key access on possibly-`None` objects in f-strings,
+ternary expressions, and any short-circuit where subscript/method-call precedence
+outruns the guard.
+
+**When this bug hides:** API calls returning `None` (rate-limiting, no token, network
+failure) vs. returning a dict with a missing key. Both produce `None` at the call site,
+but the fix strategy differs: authenticate, handle rate-limiting, or check the key exists.
+
+**Detection:** Wrap API-returned values in a dataclass or TypedDict so `None` vs
+`{"state": "open"}` are distinct types caught by a type checker — or add explicit
+`assert isinstance(result, dict)` guards after `fetch_json()`.
+
 ### 1. Stuck/Zombie Gateway Process
 
 **Symptom:** Gateway appears running (PID exists, sockets open, `ps aux` shows it) but not processing messages, not writing logs, `tail -f` on log file shows nothing.

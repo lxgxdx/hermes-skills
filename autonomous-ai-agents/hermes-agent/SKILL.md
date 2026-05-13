@@ -657,6 +657,8 @@ hermes skills search <keyword>  # 然后安装
 
 ### 查看 Hermes 更新内容
 
+**重要：用户问"Hermes有更新吗/更新了什么"时，优先用 git log 查询。这是高频问题，不要忽略。**
+
 **方法：** 直接查 git log 获取版本更新记录：
 
 ```bash
