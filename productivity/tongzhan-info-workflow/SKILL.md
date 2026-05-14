@@ -80,7 +80,13 @@ def searxng_search(query, max_results=8):
 
 **本地搜索（两层策略）**：
 
-**第一层：search_files** — 快速定位文件
+**第一层：自查找问题（最重要！）** — 直接从自查汇报挖全新方向
+- **关键文件**：`6.巡查部机关/7.上报材料/中共五莲县委统战部工作情况自查汇报.docx`
+- 用 libreoffice 转换为 txt 后读取，**重点关注"存在的主要问题与不足"章节**（通常7-8个问题点，每个就是一个潜在的全新选题方向）
+- 自查汇报的问题清单是县委巡查后官方认定的短板，比工作总结更有价值——工作总结是"做了什么"，自查汇报是"还差什么"，后者直接对应信息稿的改进建议类选题
+- ⚠️ 转换方式：`libreoffice --headless --convert-to txt --outdir /tmp/tongzhan_docs "文件.docx"`
+
+**第二层：search_files** — 快速定位文件
 - 搜索 /mnt/nfs/2026年统战工作 目录下的 docx/doc 文件
 - ⚠️ **`search_files` 的 `target=content` 对中文关键词返回 0 结果**（不论 `file_glob` 设什么），这是工具已知局限
 - 因此 `content` 模式只用于英文/拼音搜索；中文搜索改用第二层
@@ -616,6 +622,7 @@ with urllib.request.urlopen(req) as resp:
 | **用户模型摘要** | `references/用户模型摘要.md`（用户身份/偏好/关键路径/已知纠正记录，信息稿任务执行前快速参考） |\n| **热点新闻素材（特朗普访华+台湾角度）** | `references/2026-05-13-trump-visit-taiwan-angle.md`（特朗普2026年5月13日访华热点全量素材：特朗普"统一说"、台湾"菜单焦虑"、国台办发布会全部问答、两岸人员往来500万人次数据等） |\n| **国台办发布会全文素材** | `references/2026-05-13-gwytb-presser-全文.md`（2026年5月13日国台办发布会全部问答点，URL获取规律+编码说明） |
 | **当月选题线索汇总** | `8.信息工作/范文/2026年/4月/4月份下半月信息宣传选题汇总.docx` — 各联络员自提选题草稿，含白鹭湾打卡点、侨联读书日、张雪机车、基层新阶层、网络统战等方向；是本地选题最直接的来源 |
 | **公众号内容制作（HTML截图方案）** | `references/公众号内容制作.md` — AI生图随机性高，用HTML+Chrome截图代替；包含标准工作流、配色模板、MiniMax API备选方案 |
+| **飞书消息发送坑** | `references/feishu-messaging-pitfalls.md` — open_id vs chat_id、cron环境webhook失效、lxgxdx ID速查 |
 
 ---
 
