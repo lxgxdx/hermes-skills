@@ -185,6 +185,29 @@ hermes webhook remove NAME  Remove a subscription
 hermes webhook test NAME    Send a test POST
 ```
 
+### Plugins
+
+```
+hermes plugins list                List installed plugins
+hermes plugins install <id>       Install from GitHub (owner/repo or URL)
+hermes plugins enable <name>      Enable a plugin
+hermes plugins disable <name>     Disable a plugin
+hermes plugins update <name>      Update a plugin
+hermes plugins remove <name>      Remove a plugin
+```
+
+**安装第三方插件示例（mempalace）：**
+```bash
+hermes plugins install NehuenD/hermes_mempalace
+hermes plugins enable mempalace
+# 依赖不会自动装，必须用 uv pip 安装到 Hermes venv
+uv pip install chromadb pyyaml --python ~/.hermes/hermes-agent/venv/bin/python
+uv pip install mempalace --python ~/.hermes/hermes-agent/venv/bin/python
+hermes gateway restart
+```
+
+内置 memory provider：`mem0`、`honcho`、`supermemory`、`holographic`、`hindsight`、`retaindb`、`byterover`、`openviking`。第三方：`mempalace`。
+
 ### Profiles
 
 ```
@@ -677,6 +700,19 @@ a7e7921db fix(tui): trim markdown wrap spaces (#22062)          ← 最近
 常见 type：feat（新功能）、fix（修复）、perf（性能）、docs（文档）、chore（基建）
 
 用户问"Hermes有更新吗/更新了什么"时，用 git log 直接查是最准确的方式。
+
+### Plugin pip Dependencies Not Auto-Installed
+
+插件的 `pip_dependencies` 字段声明的依赖**不会自动安装**。插件加载时会失败，但报错信息不清楚。
+
+**症状：** `hermes plugins enable <name>` 成功，但 gateway 重启后插件工具不可用，无明确报错。
+
+**解法：** 手动用 `uv pip` 安装到 Hermes 的 venv：
+```bash
+uv pip install <package> --python ~/.hermes/hermes-agent/venv/bin/python
+```
+
+**注意：** 直接用 `pip install` 会装到系统 Python，Hermes 的 venv 不会用到。
 
 ### Gateway Zombie Process Recovery
 

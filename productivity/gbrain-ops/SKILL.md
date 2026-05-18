@@ -14,6 +14,7 @@ description: GBrain 个人知识库操作手册。涵盖 gbrain put 必须通过
   - 用户纠正了我的工作流程/格式/偏好（"不是说过不要XXX吗"）
   - 发现新的工具技巧、绕过方法、调试路径
   - 创建了新 Skill / 修改了现有 Skill
+- **Dream Cycle 执行**：cron 触发后，从 Hermès state.db 提取当日实体（人/公司/话题/项目），写入 ~/brain/ 目录结构，gbrain embed --stale 更新向量索引（若 bun 方式可用）
   - 重要约定（"有deadline要主动汇报"）
   - 非 trivial 的问题解决方案
 - **不要等用户要求** — 这是 Agent 的主动行为
@@ -52,7 +53,30 @@ compiled binary `/home/lxgxdx/gbrain/bin/gbrain` 在某些环境下有 bunfs bug
 - 2026-04-19 记录：compiled binary 在 PGLite 模式下报 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`
 - 2026-05-09 实测：compiled binary **完全正常**，doctor 和 embed 均成功
 - 2026-05-10 实测：compiled binary **完全正常**，doctor --json 成功（250 pages，health_score 95）
-- **结论**：bunfs bug 已在当前环境修复，日常使用可直接用 compiled binary，无需 bun 方式
+- **2026-05-19 实测（回归）**：compiled binary 的 `doctor --json` 可用（health_score: 90），但所有需要写入数据库的操作（`put`、`embed --stale`）均失败并报 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`
+- **结论**：bunfs bug 在 PGLite write 操作上存在回归。日常 read 操作（`doctor`、`list`、`get`）可用 compiled binary；write 操作（`put`、`embed`）必须用 bun 方式
+
+**当前环境实测命令（2026-05-19）：**
+```bash
+# ✅ read 操作 — compiled binary 可用
+/home/lxgxdx/gbrain/bin/gbrain doctor --json
+# 输出：{"schema_version":2,"status":"warnings","health_score":90,"checks":[...]}
+
+/home/lxgxdx/gbrain/bin/gbrain list --limit 10
+
+# ❌ write 操作 — compiled binary 失败（bunfs bug）
+/home/lxgxdx/gbrain/bin/gbrain put <slug> --content '...'
+# 错误：ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'
+
+/home/lxgxdx/gbrain/bin/gbrain embed --stale
+# 错误：ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'
+```
+
+**bun 方式（write 操作必须用）：**
+```bash
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts put <slug> --content '...'
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --stale
+```
 
 **当前环境实测命令（2026-05-10）：**
 ```bash
@@ -144,6 +168,82 @@ bun run ~/gbrain/src/cli.ts put slug < /tmp/content.md
 ```python
 BRAIN_DIR / (slug.replace('/', os.sep) + '.md')
 ```
+
+---
+
+## Dream Cycle（每日同步流程）
+
+每日 cron 自动执行，从 Hermès state.db 提取当日所有对话的实体，写入 brain 目录结构。
+
+### 执行步骤
+
+**Step 1: 查询当日 session 和消息**
+```python
+import sqlite3
+from datetime import date, datetime, timedelta
+
+today = date.today()
+db = sqlite3.connect('/home/lxgxdx/.hermes/state.db')
+c = db.cursor()
+
+today_start = datetime(today.year, today.month, today.day, 0, 0, 0)
+today_end = datetime(today.year, today.month, today.day, 23, 59, 59)
+today_ts_start = today_start.timestamp()
+today_ts_end = today_end.timestamp()
+
+sessions = c.execute("""
+    SELECT id, source, started_at, message_count, title
+    FROM sessions
+    WHERE started_at >= ? AND started_at <= ?
+    ORDER BY started_at
+""", (today_ts_start, today_ts_end)).fetchall()
+
+for sid, source, ts, count, title in sessions:
+    msgs = c.execute("""
+        SELECT role, content FROM messages
+        WHERE session_id = ?
+        ORDER BY timestamp
+    """, (sid,)).fetchall()
+    # 拼接用于实体提取...
+```
+
+**Step 2: 提取实体并写入 ~/brain/ 目录结构**
+```
+~/brain/people/<name>.md     — 人物卡
+~/brain/projects/<name>.md   — 项目页
+~/brain/concepts/<name>.md   — 概念页
+```
+
+**Step 3: gbrain doctor --json 健康检查**
+```bash
+/home/lxgxdx/gbrain/bin/gbrain doctor --json
+```
+
+**Step 4: gbrain embed --stale 更新索引**
+
+⚠️ **注意**：compiled binary 在 PGLite write 上有 bunfs bug 回归（2026-05-19 实测），需要用 bun 方式：
+```bash
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --stale
+```
+
+如果 bun 方式也失败（`/$bunfs/root` 路径问题），页面已写入 ~/brain/ 目录，待环境修复后手动 sync。
+
+### Brain 目录结构
+
+```
+~/brain/
+├── people/       — 人物页
+├── projects/     — 项目页
+├── concepts/     — 概念页
+└── (其他按需创建)
+```
+
+### Dream Cycle 执行状态（2026-05-19）
+
+- 实体提取：6 个 cron session，18 个实体
+- Brain 页面写入：3 个新页面（song-jianhai.md、tongzhan-info-topics.md、pve-wiki.md）
+- doctor：通过，health_score 90（resolver + connection warnings）
+- embed --stale：❌ compiled binary bunfs bug 回归，bun 方式未测试（环境问题）
 
 ---
 

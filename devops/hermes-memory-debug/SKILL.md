@@ -43,3 +43,13 @@ MEMORY.md 或 USER.md 超过了字符限制（约2200和1375字符）。
 - memory tool源码：`~/.hermes/hermes-agent/tools/memory_tool.py`
 - memory manager：`~/.hermes/hermes-agent/agent/memory_manager.py`
 - memory provider抽象：`~/.hermes/hermes-agent/agent/memory_provider.py`
+
+## 可选 Memory Provider 插件
+
+### MemPalace（第三方）
+
+本地优先长期记忆插件，ChromaDB + SQLite 向量搜索，宫殿层级结构。
+
+**详见**: `references/mempalace-plugin.md`
+
+其他内置 memory provider（均需额外配置）：`mem0`、`honcho`、`supermemory`、`holographic`、`hindsight`、`retaindb`、`byterover`、`openviking`

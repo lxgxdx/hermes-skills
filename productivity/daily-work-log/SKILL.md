@@ -55,27 +55,42 @@ Core philosophy: **Every day is a project page. Consistency is memory.**
 
 ```python
 import sqlite3
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 yesterday = date.today() - timedelta(days=1)
-yesterday_ts_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
-yesterday_ts_end = yesterday.replace(hour=23, minute=59, second=59, microsecond=999999).timestamp()
+yesterday_start = datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0)
+yesterday_end = datetime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59)
+yesterday_ts_start = yesterday_start.timestamp()
+yesterday_ts_end = yesterday_end.timestamp()
 
 db = sqlite3.connect('/home/lxgxdx/.hermes/state.db')
 c = db.cursor()
 
-# sessions 表的时间列是 timestamp（Unix epoch），不是 started_at
+# sessions 表的时间列是 started_at（Unix epoch），不是 timestamp 或 created_at
 sessions = c.execute("""
-    SELECT id, source, timestamp
+    SELECT id, source, started_at, message_count, title
     FROM sessions
-    WHERE timestamp >= ? AND timestamp <= ?
-    ORDER BY timestamp
+    WHERE started_at >= ? AND started_at <= ?
+    ORDER BY started_at
 """, (yesterday_ts_start, yesterday_ts_end)).fetchall()
 ```
 
-**⚠️ Pitfall 1**: `sessions` 表的时间列是 `timestamp`（Unix epoch），**不是** `started_at` 或 `created_at`。
+**⚠️ Pitfall 1**: `sessions` 表的时间列是 `started_at`（Unix epoch），不是 `timestamp`、`created_at` 或 `ended_at`。
 
-**⚠️ Pitfall 2**: `messages` 表的时间列也是 `timestamp`，同样需要注意。
+**⚠️ Pitfall 2 (2026-05-19 实测 bug)**: `datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0)` 正确，但 `date.replace()` 错误示范如下：
+
+```python
+# ❌ 错误：date.replace() 不接受 hour/minute/second/microsecond 参数
+yesterday_ts_start = yesterday.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+# TypeError: replace() takes at most 3 keyword arguments (4 given)
+
+# ✅ 正确：用 datetime() 构造函数
+from datetime import datetime
+yesterday_start = datetime(yesterday.year, yesterday.month, yesterday.day, 0, 0, 0)
+yesterday_ts_start = yesterday_start.timestamp()
+```
+
+这个 bug 会导致 cron 任务在 `gbrain put` 之前就报 TypeError 并中断，整个日志生成失败。
 
 ### Step 2: 读取每个 session 的消息
 
@@ -118,12 +133,24 @@ for sid, source, ts in sessions:
 
 ### Step 4: 存入 GBrain
 
+⚠️ **必须用 bun 方式**，compiled binary 的 PGLite write 有 bunfs bug（`/$bunfs/root/pglite.data` ENOENT，2026-05-19 回归）。
+
 slug 格式：`daily/{date}`
 
 ```bash
-~/.bun/bin/bun run ~/gbrain/src/cli.ts put daily/{date} --stdin << 'EOF'
-[内容]
-EOF
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts put daily/{date} --content '...'
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --slugs daily/{date}
+```
+
+**⚠️ GBrain 远程 PostgreSQL 不可用时的降级处理**：如果 `put` 报错 `database "gbrain" does not exist`（远程 Postgres 的 gbrain 数据库不存在）或 `relation "pages" does not exist`（数据库存在但 schema 未初始化），需要先初始化本地 PGLite：
+
+```bash
+# 初始化本地 PGLite（降级方案，不依赖远程 Postgres）
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts init --engine pglite
+
+# 然后重试 put（仍用 bun 方式）
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts put daily/{date} --content '...'
+cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --slugs daily/{date}
 ```
 
 ### Step 5: 确认
