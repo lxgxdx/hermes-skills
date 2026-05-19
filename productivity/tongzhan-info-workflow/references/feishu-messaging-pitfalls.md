@@ -1,16 +1,19 @@
 # Feishu API 消息发送 — 常见坑
 
-## open_id vs chat_id（最常见错误）
+## ⚠️ ID 混淆陷阱（最重要！）
 
-发送 Feishu 消息时，`receive_id_type=open_id` 必须使用用户的 **open_id**，而不是 chat_id。
+**lxgxdx 有两套不同的飞书 ID，来自两个不同的飞书应用：**
 
-| ID类型 | 值 | 用途 |
-|--------|---|------|
-| **open_id** | `ou_ea6590a294ed18aab85697c5862e83b6` | ✅ 发送消息必须用这个 |
-| **chat_id** | `oc_7c656031826c26b15f17d010097f3619` | ❌ 群聊/会话ID，不可用于发送 |
-| **union_id** | `on_818426725f6ef8b6e0414d92e5d23e4f` | 跨应用用户标识 |
+| ID类型 | 值 | 所属应用 | 用途 |
+|--------|---|---|---|
+| **open_id（用户）** | `oc_7c656031826c26b15f17d010097f3619` | Hermes Gateway 飞书连接 | ✅ 发送消息给用户 |
+| **open_id（Bot）** | `ou_ea6590a294ed18aab85697c5862e83b6` | Hermes Gateway 飞书 Bot | ❌ 这个是 Bot 自己的 ID，不是用户的！ |
+| **chat_id** | `oc_7c656031826c26b15f17d010097f3619` | — | 用户在 Gateway 中的会话标识 |
+| **union_id** | `on_818426725f6ef8b6e0414d92e5d23e4f` | — | 跨应用用户标识 |
 
-**错误信息**：`"open_id cross app"` — 表示 open_id 属于另一个 app，不能跨 app 使用。
+> ⚠️ **2026-05-20 验证失败教训**：`ou_ea6590a294ed18aab85697c5862e83b6` 是 Hermes Gateway 飞书 Bot 自己的 open_id，用它给用户发消息会报 `"open_id cross app"`。**发送消息必须用 `oc_7c656031826c26b15f17d010097f3619`**（即 Gateway 里的 `open_id` 字段）。
+
+**错误信息**：`"open_id cross app"` — 表示你用的 open_id 属于另一个飞书应用（通常是 Bot 的 ID），不能跨应用发消息。
 
 ## 获取 token 的标准代码
 
@@ -40,7 +43,7 @@ with urllib.request.urlopen(req) as resp:
 send_req = urllib.request.Request(
     'https://open.feishu.cn/open-apis/im/v1/messages?receive_id_type=open_id',
     data=json.dumps({
-        'receive_id': 'ou_ea6590a294ed18aab85697c5862e83b6',  # open_id
+        'receive_id': 'oc_7c656031826c26b15f17d010097f3619',  # 用户 open_id（不是 Bot 的 ou_ ID）
         'msg_type': 'text',
         'content': json.dumps({'text': '消息内容'})
     }).encode(),
@@ -76,8 +79,9 @@ with urllib.request.urlopen(search_req) as resp:
 
 ## lxgxdx 的 ID 速查
 
-| 字段 | 值 |
-|------|---|
-| open_id | `ou_ea6590a294ed18aab85697c5862e83b6` |
-| chat_id | `oc_7c656031826c26b15f17d010097f3619` |
-| union_id | `on_818426725f6ef8b6e0414d92e5d23e4f` |
+| 字段 | 值 | 备注 |
+|------|---|------|
+| open_id（用户） | `oc_7c656031826c26b15f17d010097f3619` | ✅ 发消息用这个 |
+| open_id（Bot） | `ou_ea6590a294ed18aab85697c5862e83b6` | ❌ Bot ID，不可用于发消息 |
+| chat_id | `oc_7c656031826c26b15f17d010097f3619` | 与用户 open_id 相同 |
+| union_id | `on_818426725f6ef8b6e0414d92e5d23e4f` | 跨应用标识 |
