@@ -41,9 +41,26 @@ description: 统一战线信息稿工作流。触发词：搜索选题/信息稿
 ### 搜索方式（定时任务，凌晨执行）
 
 **外网搜索（Searxng 元搜索）**：
-- 地址：`http://localhost:7777`（2026年5月实测可用）
+- 地址：`http://192.168.88.68:8083`（容器内 8080，映射到宿主机 8083）
+- 备用地址：`http://localhost:7777`（如果 8083 端口不通）
 - 接口：`/search?q=关键词&format=json`
-- ⚠️ **Searxng 服务在 cron 环境下可能返回空结果**（服务临时不可用或连接超时）。处理方式见"7.1 Searxng 返回 0 条结果"段落。
+- ⚠️ **Searxng 服务在 cron 环境下经常返回空结果**（所有引擎超时）。处理方式见"7.1 Searxng 返回 0 条结果"段落。
+
+**⚠️ Searxng 返回 0 条结果的兜底优先级（已验证，2026-05-21）**：
+> cron 凌晨执行时，Searxng 对所有查询返回空结果（所有引擎超时），但直接访问网页正常。这说明网络对 HTTP 端口有选择性限制。
+>
+> **已验证可用的兜底方案（按优先级）**：
+> 1. **browser_navigate 访问权威新闻网站**：观察者网 guancha.cn、国家宗教事务局 sara.gov.cn、国务院台办 gwytb.gov.cn，从首页要闻中提取相关选题素材。**已验证**：观察者网/台湾版面、国家宗教局官网均可正常访问。
+> 2. **模型领域知识兜底**：直接用 deepseek-v4-flash 的领域知识生成选题，基于对台/民族宗教工作政策背景生成有据可查的选题方向。标注"基于领域知识生成"。
+> 3. **本地文件兜底**：从本地 docx（自查汇报、工作要点）中的问题章节提取方向。
+>
+> **已验证不可用的方案**：
+> - Searxng（所有端口）→ 全部超时
+> - 百度/Google/Bing 直接 HTTP 请求 → 全部超时
+> - Yahoo/DuckDuckGo curl → 无响应
+> - 搜狐/腾讯搜索 → 502/超时
+>
+> **不依赖 Searxng，直接用 browser_navigate 访问权威新闻网站**是最可靠的方案。
 
 ```python
 import urllib.request, urllib.parse, json
@@ -181,18 +198,12 @@ print(text[:3000])
     - 搜索词如：`民族宗教 问题 乱象 2025 统一战线`、`佛教道教 商业化 违规 2025`、`网络宗教 非法 传播 2025`、`宗教活动 场所 乱象 2025`
   - **台湾方向**：
 
-⚠️ **Searxng 对台湾相关关键词返回空结果是常态（引擎超时或被屏蔽）。** 2026年5月实测确认：google/baidu/bing 引擎对所有台湾方向搜索词（包括"台胞在大陆困难"、"两岸关系新问题"等）均返回0条结果，与查询词选择无关。
+⚠️ **Searxng 对台湾相关关键词返回空结果是常态（引擎超时或被屏蔽）。** 2026年5月实测确认：google/baidu/bing 引擎对所有台湾方向搜索词均返回0条结果。
 
 **台湾方向的正确兜底策略（必须执行，不得跳过）**：
-1. **调用模型常识生成选题**：直接用 deepseek-v4-flash 的领域知识生成4个台湾方向选题，基于对台工作政策背景（如《惠台31条》《惠台26条》落实情况、国台办历年发布会内容等），确保选题符合中央对台工作精神
-2. **选题方向参考**（已验证适合问题类信息稿）：
-   - 台商在大陆转型升级困境（融资难、政策不对称）
-   - 台湾青年就业创业隐性壁垒（学历认证、资质互认）
-   - 两岸婚姻家庭子女教育问题（入学、户籍衔接）
-   - 台胞社保医疗衔接难题（转移接续、就医结算）
-3. **标注"网上案例"或"对台工作会议反映"**：不在依据中捏造具体链接，但确保选题方向有政策依据
-4. **吕礼诗方向（已验证为优质小切口）**：台退役舰长吕礼诗多次公开登上解放军装备/观礼，每次都遭绿营攻击，现面临退休金被扣减风险。此角度有具体人物+具体动作+具体后果+原话引述+国台办背书，是目前发现的最具体、最有故事性的台湾小切口。素材从国台办发布会全文提取（见 references/2026-05-13-gwytb-presser-全文.md 第8节）
-5. **民族宗教方向不受影响**：Searxng 对民族宗教类中文关键词返回结果正常，继续使用外网搜索
+1. **browser_navigate 访问权威来源**：直接访问观察者网台湾版面（https://www.guancha.cn/taiwan/）或国务院台办官网（gwytb.gov.cn），从首页要闻中提取两岸关系/台胞相关热点，选题自然融入台湾角度
+2. **调用模型常识生成选题**：直接用 deepseek-v4-flash 的领域知识生成台湾方向选题，基于《惠台31条》《惠台26条》落实情况、国台办历年发布会内容，生成符合中央对台工作精神的选题方向
+3. **标注"基于领域知识生成"**：确保选题方向有政策依据而非凭空捏造
 - 本地：搜索 /mnt/nfs/2026年统战工作 目录下 docx/doc 文件，找近期台胞台商相关工作动态（如2024年工作总结提及的"亿丰台资获奖"等）
 
 **经验类（每天 02:00 执行）**：
@@ -715,13 +726,43 @@ with urllib.request.urlopen(req) as resp:
 3. 优先选尚未在近期选题中出现的**维度组合**
 4. 写排重备注时，明确说明"与05/XX选题从XX维度区分"
 
-### 7.1 Searxng 返回 0 条结果
-- **检查 JSON 格式**：先跑 `curl "http://localhost:7777/search?q=统一战线&format=json&limit=2"` 看返回是否含 `results` 数组
-- **中文编码**：Python 中 query 字符串整体用 `urllib.parse.urlencode({"q": query, ...})` 编码，quote 只用于 URL 路径参数而非整段查询；Searxng 元搜索对 URL 编码格式敏感
-- **确认 `search.formats` 包含 `json`**：配置文件 `/mnt/user/appdata/searxng/settings.yml`，必须在 `search.formats` 中加入 `json`，否则 JSON API 返回 403
-- **Searxng 容器端口**：容器内 8080，2026年5月实测通过 `localhost:7777` 映射可达
-- 容器重启命令（在 Unraid 上）：`docker restart searxng`
-- **全部查询都返回空**：执行 curl 验证后仍无 `results`，说明服务不可用，切换到兜底策略（见上方"搜索方式"中的 Searxng 不可用兜底策略）
+### 7.0 execute_code 中 urllib 也遭遇 DNS 错误（2026-05-21 新发现）
+
+**现象**：`execute_code` 中的 `urllib.request.urlopen()` 遇到 `Name or service not known`（DNS解析失败），说明 Searxng 的 HTTP 地址完全不可达。
+
+**根本原因**：cron 凌晨执行时，网络对 HTTP 端口有选择性限制。`browser_navigate` 走的是浏览器层（通常走 HTTPS/80/443），与纯 HTTP 请求（如 Searxng 的 `/search` API）路径不同。
+
+**兜底策略优先级（已验证，2026-05-21）**：
+1. **browser_navigate 访问权威新闻网站**（最高可靠）→ 访问 guancha.cn/sara.gov.cn/gwytb.gov.cn 等 HTTPS 站点
+2. **模型领域知识兜底** → 直接用模型知识生成，标注"基于领域知识生成"
+3. **本地文件兜底** → 从 docx（自查汇报、工作要点）问题章节提取
+
+**⚠️ 不要用 `execute_code + urllib` 做外网搜索** — 遇到 DNS 错误后应直接切换到 browser_navigate，不要反复重试。
+
+### 7.0 execute_code 中 urllib 也遭遇 DNS 错误（2026-05-21 新发现）
+
+**现象**：`execute_code` 中的 `urllib.request.urlopen()` 遇到 `Name or service not known`（DNS解析失败），说明 Searxng 的 HTTP 地址完全不可达。
+
+**根本原因**：cron 凌晨执行时，网络对 HTTP 端口有选择性限制。`browser_navigate` 走的是浏览器层（通常走 HTTPS/80/443），与纯 HTTP 请求（如 Searxng 的 `/search` API）路径不同。
+
+**兜底策略优先级（已验证，2026-05-21）**：
+1. **browser_navigate 访问权威新闻网站**（最高可靠）→ 访问 guancha.cn/sara.gov.cn/gwytb.gov.cn 等 HTTPS 站点
+2. **模型领域知识兜底** → 直接用模型知识生成，标注"基于领域知识生成"
+3. **本地文件兜底** → 从 docx（自查汇报、工作要点）问题章节提取
+
+**⚠️ 不要用 `execute_code + urllib` 做外网搜索** — 遇到 DNS 错误后应直接切换到 browser_navigate，不要反复重试。
+
+### 7.1 Searxng 返回 0 条结果（已验证，2026-05-21）
+- **现象**：cron 凌晨执行时，Searxng 对所有查询返回 0 结果（所有引擎超时：`google timeout`、`baidu timeout`、`duckduckgo timeout`），但浏览器直接访问网页正常
+- **原因**：网络对 HTTP 端口有选择性限制，Searxng 使用的元搜索引擎端口被拦截
+- **检查方法**：`curl "http://192.168.88.68:8083/search?q=统一战线&format=json&limit=2"` 看是否含 `results` 数组
+- **已验证可用的兜底方案（按优先级）**：
+  1. **browser_navigate 访问权威新闻网站**（最高优先级）：
+     - 民族宗教方向：`https://www.sara.gov.cn/`（国家宗教局官网）
+     - 台湾方向：`https://www.guancha.cn/taiwan/`（观察者网台湾版面）
+     - 从首页要闻列表中提取相关选题素材，滚动页面查看更多内容
+  2. **模型领域知识兜底**：直接用模型知识生成选题，标注"基于领域知识生成"
+  3. **本地文件兜底**：从本地 docx（自查汇报、工作要点）问题章节提取方向
 
 ### 7.2 search_files 对中文关键词返回 0
 - **这是工具已知局限**，`target=content` 模式对中文检索失效，无论 file_glob 设什么都返回0
