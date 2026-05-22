@@ -16,61 +16,87 @@ category: productivity
 
 ## ⚡ QuickRef（必须记住，每次都用）
 
-```
-SKILL_DIR=~/ppt-master/skills/ppt-master
-PROJECT_DIR=~/ppt-master/projects   # 项目存放目录
-```
+**路径：**
+- `SKILL_DIR=~/.hermes/skills/ppt-work/ppt-master-repo/skills/ppt-master`
+- `PROJECT_DIR=~/ppt-master/projects`
+- ⚠️ 旧路径 `~/ppt-master/skills/ppt-master` 已废弃
 
-**⚠️ 重要：SKILL_DIR 路径**
-- 正确：`~/.hermes/skills/ppt-work/ppt-master-repo/skills/ppt-master`
-- 错误：`~/.hermes/skills/ppt-master-repo/skills/ppt-master`（不存在）
+**完整七步流程（必须按顺序执行，不得并行或跳步）：**
 
-**完整七步流程（必须按顺序执行）：**
+所有命令**必须** `cd ~/ppt-master` 后执行。
+
 ```bash
 # Step 1: 内容转换（如有PDF/DOCX/Excel）
-${PYTHON} ${SKILL_DIR}/scripts/source_to_md/pdf_to_md.py <file>
-${PYTHON} ${SKILL_DIR}/scripts/source_to_md/doc_to_md.py <file>
-${PYTHON} ${SKILL_DIR}/scripts/source_to_md/excel_to_md.py <file>
+python "${SKILL_DIR}/scripts/source_to_md/pdf_to_md.py" <file>
+python "${SKILL_DIR}/scripts/source_to_md/doc_to_md.py" <file>
+python "${SKILL_DIR}/scripts/source_to_md/excel_to_md.py" <file>
 
-# Step 2: 初始化项目（进入 ppt-master 目录执行）
-cd ~/ppt-master
-${PYTHON} ${SKILL_DIR}/scripts/project_manager.py init <项目名> --format ppt169
+# Step 2: 初始化项目
+python "${SKILL_DIR}/scripts/project_manager.py" init <项目名> --format ppt169
 
 # Step 3: 导入源文件
-${PYTHON} ${SKILL_DIR}/scripts/project_manager.py import-sources <项目路径> <源文件...> --move
+python "${SKILL_DIR}/scripts/project_manager.py" import-sources <项目路径> <源文件...> --move
+```
+
+⚠️ **import-sources 对含大量图片的DOCX转换会失败**（如演讲稿75MB含24张照片）：
+- 手动解压DOCX的 `word/media/` 目录下所有图片到项目 `images/` 目录：
+```python
+import zipfile, os
+with zipfile.ZipFile('xxx.docx', 'r') as z:
+    for name in z.namelist():
+        if name.startswith('word/media/') and not name.endswith('/'):
+            fname = os.path.basename(name)
+            with open(f'<项目>/images/{fname}', 'wb') as f:
+                f.write(z.read(name))
+```
 
 # Step 4: ⛔ BLOCKING — Strategist Phase（八项确认）
-#    必须先读取 ${SKILL_DIR}/SKILL.md 完整流程
-#    向用户展示八项确认，等待明确确认后才能继续
-#    八项确认内容：a.画布尺寸 b.页面数量 c.受众定位 d.风格定位
-#                  e.配色方案 f.图标方案 g.字体方案 h.图片方案
+向用户展示完整策划方案，等待明确确认后才能继续。
+八项确认：a.画布尺寸 b.页面数量 c.受众定位 d.风格定位
+　　　　　e.配色方案 f.图标方案 g.字体方案 h.图片方案
 
-# Step 5: 图片获取（如设计稿需要AI图片则执行，否则跳过）
+⚠️ **演讲稿类PPT的特殊处理**（含大量实拍活动照片）：
+- 增加配图页/图片墙，每段内容对应1-2张照片展示
+- 封面用深色渐变全幅背景，数据页用大数字排版
+- 照片来自DOCX原稿，手工复制到项目images/目录
 
-# Step 6: SVG生成（Executor Phase — 严格按照 spec_lock.md 执行）
+# Step 5: 图片获取（DOCX实拍照片优先，无需AI生成额外图片）
 
-**Step 7: 后处理三步（必须顺序执行，不能跳过）**
+# Step 6: SVG生成（Executor Phase）
+⚠️ **严格约束：必须由主agent连续逐页生成，不得委托子agent**
+
+**Step 7: 后处理三步（必须顺序执行，每步确认无报错）**
+
+⚠️ **在运行 Step 7.2 之前**，如果 SVG 文件在 `svg_output/` 子目录中，先修复图片路径：
 ```bash
-# ⚠️ 先 cd 到 ppt-master 目录
+cd <项目>/svg_output/
+sed -i 's|images/|../images/|g' *.svg
+```
+然后再回到 ppt-master 根目录继续后处理。
+
+```bash
 cd ~/ppt-master
 
 # Step 7.1: 分割讲稿为分页备注
 python skills/ppt-master/scripts/total_md_split.py <项目路径>
+# ✅ 确认无报错再继续
+# ⚠️ 如果报错 "No notes content found"，检查 total.md 格式：必须用 "# 01_封面" 顶级标题，页数要与SVG数量匹配
 
-# Step 7.2: SVG后处理（图标嵌入/图片裁剪/文字扁平化/圆角转路径）
+# Step 7.2: SVG后处理（图片嵌入+圆角转路径）
 python skills/ppt-master/scripts/finalize_svg.py <项目路径>
+# ✅ 确认无报错（图片应全部显示 [OK]），如全部 [FAIL] 检查图片路径
 
 # Step 7.3: 导出PPTX
-# ⚠️ 用 -s svg_output（从 svg_output/ 导出），不是 -s final
-python skills/ppt-master/scripts/svg_to_pptx.py <项目路径> -s svg_output -o <输出路径>
+python skills/ppt-master/scripts/svg_to_pptx.py <项目路径> -s final
+# 输出：exports/<项目名>_<时间戳>.pptx
 ```
 
-**⚠️ 绝不能跳过的关键节点：**
-1. **Step 4（Strategist）— BLOCKING**: 八项确认必须等用户确认，确认前不能生成任何SVG
+**⚠️ 绝不能违反的规则：**
+1. **Step 4（Strategist）— BLOCKING**: 必须等用户确认，确认前不能生成任何SVG
 2. **finalize_svg.py** 绝对不能跳过
-3. 后处理三步必须顺序执行，不能合并
-4. 导出用 `-s svg_output`（从 svg_output/ 而非 svg_final/，这是正确参数）
-4. 导出必须用 `-s final`（从 svg_final/ 而非 svg_output/）
+3. 后处理三步必须顺序执行不合并，每步确认无报错
+4. **导出参数：必须用 `-s final`**（从 `svg_final/` 导出），**禁止用 `-s svg_output`**
+5. SVG生成必须由主agent连续逐页完成，**禁止委托给子agent**
 
 ---
 
@@ -120,7 +146,41 @@ full_text = ''.join(texts)
 A: 用这个：`~/.hermes/skills/ppt-work/ppt-master-repo/skills/ppt-master`
 
 **Q: Eight Confirmations 要等多久？**
-A: ⛔ BLOCKING — 必须等用户确认后才能继续，不能自己猜着执行
+A: ⛔ BLOCKING — 必须等用户确认后才能继续，不能自己猜着执行。
+⚠️ **例外**：用户主动说"继续"或"继续ppt"，或之前已确认过同类任务时，可直接继续生成，无需重复确认。
+
+**Q: finalize_svg 报 "Image not found" 但图片确实存在？**
+A: SVG文件在 `svg_output/` 子目录中时，`<image href="images/...">` 路径相对于项目根目录，**不是**相对于SVG文件。解法：
+```bash
+cd <项目>/svg_output/
+sed -i 's|images/|../images/|g' *.svg
+```
+然后再运行 `finalize_svg.py`。
+
+**Q: finalize_svg 报 "Image not found" 且图片路径已正确？**
+A: 检查 finalize 命令是否从 ppt-master **根目录**执行（必须 `cd ~/ppt-master`）。
+
+**Q: 用户上传了"定稿"、"最终版"、"附图"等文件，意味着什么？**
+A: 当用户上传文件名含有 `定稿`、`最终版`、`附图`、`v2`、`final` 等关键词时，**这是优先级信号**：用户可能在使用更新后的内容替代旧版本。处理流程：
+1. **不要只缓存文件就结束** — 必须主动向用户确认
+2. 标准问法：「检测到您上传了【文件名】，这是最新版演讲稿吗？需要我用这个版本重新制作PPT吗？」
+3. 如果用户说"是"或"重新制作"，立即用新文档重新走 SVG 生成流程
+4. 典型案例（2026-05-22）：用户上传了 `定稿 - 附图.docx`（含24张照片最终版），AI 缓存后未确认，导致 PPT v2 仍基于旧版 `演讲稿_1_.docx` 生成
+
+**Q: total_md_split 报 "No notes content found"？**
+A: `total.md` 必须用 `# 01_封面` / `# 02_目录` 格式的顶级标题（与SVG文件名匹配），用 `---` 分隔的多文件合并方式不生效。
+```markdown
+# 01_封面
+封面内容...
+
+---
+
+# 02_目录
+目录内容...
+
+---
+```
+每一页对应一个 `# NN_` 标题，不能把多页内容写成一个大块。
 
 ---
 
@@ -139,14 +199,24 @@ A: ⛔ BLOCKING — 必须等用户确认后才能继续，不能自己猜着执
 3. **保留讲稿备注**：通过XML层面直接替换PPT旧版中的notesSlide文件
 4. **导出**：`python scripts/svg_to_pptx.py <项目路径> -s svg_v2 -o <输出路径>`
 
-**布局多样化原则**：
-| 页面类型 | 推荐布局 | 避免 |
-|----------|----------|------|
-| 封面/总结 | 深色全幅背景 + 居中标题 | 白色背景 |
-| 数据展示 | 大数字(80-120px)+标签 + 深色背景 | 纯卡片网格 |
-| 对比/并列 | 左右分栏 或 LLM vs Agent大字对比 | 每页相同的侧边条 |
-| 流程/时间 | 横向时间线 + 节点标签 | 堆叠卡片 |
-| 架构/体系 | 三列/四列并排特色卡片 | 单一模板重复 |
+**布局多样化原则（核心：每页结构必须不同）**：
+
+用户反馈"太板/太严肃"的根因：每页用同一套模板（统一侧边条+卡片网格），视觉上重复感强。v2成功经验：**彻底打破模板重复，每页完全不同结构**。
+
+| 页面类型 | 推荐布局 | 避免重复 |
+|----------|----------|----------|
+| 封面 | 深色渐变背景 + 流动装饰线条/几何图形 + 圆形装饰叠加 | 白色背景 + 居中标题 |
+| 目录 | 三列卡片**错落不等高**，每列不同配色 | 等高四格卡片 |
+| 导语/引言 | 大引号 + 大字留白 + 右侧装饰圆形/流动曲线 | 白色背景 + 居中文字 |
+| 人物/组织介绍 | **左右分栏**（一侧全幅照片 + 另一侧纵向内容/数据） | 卡片网格 |
+| 数据成果 | **大数字瀑布流**（数字80-120px） + 深色背景 + 装饰圆形 | 纯卡片网格 |
+| 活动图片展示 | **瀑布流不规则图片墙**，多列错落 | 整齐网格 |
+| 结语/致谢 | 深色渐变 + 装饰图形（莲花/重叠半透明圆） + 重叠标题 | 白色背景 + 居中文字 |
+
+**实用原则**：
+- 连续生成SVG时，用 `execute_code` 逐页生成，确保每页都有不同视觉结构
+- 背景不要全是白色，深色背景（`#1E3A5F` 深海蓝）配合亮色装饰更显活力
+- 避免每页顶部都有"一条色带"的习惯——试试全幅背景、侧边装饰、或无色块
 
 **配色方案（活力清新风格）**：
 ```
@@ -194,12 +264,22 @@ def inject_notes_via_xml(output_pptx, source_pptx_with_notes):
   - GitHub: https://github.com/icip-cas/PPTAgent
   - 适合需要更高设计质量或作为对比参考
 
-**Executor 快捷路径（内容结构已知时）：**
-当PPT内容已经过充分整理（如已有完整讲稿/大纲），内容结构清晰，可直接写SVG而不走完整的Executor子代理流程：
-1. 创建 `<项目>/svg_output/` 和 `<项目>/notes/` 目录
-2. 通过 `execute_code` + `write_file` 直接生成每页SVG（顺序逐页，每页独立一个文件）
-3. 将每页对应的演讲稿内容写入 `notes/<页码>_<slug>.md`（文件名需与SVG页码对应）
-4. 执行 Step 7 后处理三步
+### SVG 生成最佳实践（execute_code 路径）
+
+当内容已整理好时，用 `execute_code` 批量生成 SVG 更高效：
+
+```python
+svg_template = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <!-- SVG content -->
+</svg>'''
+with open('<项目>/svg_output/01_封面.svg', 'w') as f:
+    f.write(svg_template)
+```
+
+- 每页一个SVG文件，文件名格式：`NN_标题.svg`（数字+下划线开头）
+- viewBox 固定为 `0 0 1280 720`（16:9）
+- 图片路径用相对路径 `../images/xxx.jpeg`（svg_output是子目录）
+- 生成完所有SVG后再执行后处理三步
 
 > ⚠️ 此路径适用于内容已充分整理的场景。若内容结构不清晰，需先通过 Strategist Phase + Executor Phase 的结构化流程生成设计规格和内容大纲。
 
@@ -220,3 +300,5 @@ def inject_notes_via_xml(output_pptx, source_pptx_with_notes):
 | 文件 | 用途 |
 |------|------|
 | `references/color-schemes.md` | 用户配色偏好（活力橙+深海蓝+金黄体系），用于 Strategist Phase 配色确认 |
+| `references/speaker-notes-embedding.md` | 讲稿备注注入的XML替换法，用于保留旧版PPT备注到新SVG导出版本 |
+| `references/speech-docx-image-extraction.md` | 演讲稿DOCX图片提取+分配指南：zipfile提取图片、SVG路径修复、12页结构规划 |
