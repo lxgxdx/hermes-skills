@@ -33,26 +33,62 @@ full_text = ''.join(texts)
 print(full_text)  # 全文
 ```
 
-## SVG 图片路径修复
+## 图片与文档叙事顺序的对应关系（关键！）
 
-如果 SVG 文件在 `svg_output/` 子目录中，`<image href="images/...">` 路径相对于**项目根目录**，而不是 SVG 文件本身。需要先修复路径再运行 `finalize_svg.py`：
+**必须通过 rId 映射确定图片真实顺序**，不能按文件名数字大小猜测：
 
-```bash
-cd <项目>/svg_output/
-sed -i 's|images/|../images/|g' *.svg
+```python
+import zipfile, re
+
+doc_path = "xxx.docx"
+
+with zipfile.ZipFile(doc_path, 'r') as z:
+    xml = z.read('word/document.xml').decode('utf-8')
+    rels = z.read('word/_rels/document.xml.rels').decode('utf-8')
+
+# 1. 建立 rId → 图片名 映射
+rid_to_img = {}
+for m in re.finditer(r'Id="(rId\d+)"[^>]+Target="media/(image\d+\.jpeg)"', rels):
+    rid_to_img[m.group(1)] = m.group(2)
+
+# 2. 按图片在 document.xml 中出现的顺序（rId出现顺序）确定叙事顺序
+img_positions = []
+for rid, img in rid_to_img.items():
+    pos = xml.find(f'r:embed="{rid}"')
+    if pos >= 0:
+        img_positions.append((pos, img))
+
+img_positions.sort()
+ordered_images = [img for _, img in img_positions]
+print(f"图片叙事顺序: {ordered_images}")
 ```
 
-## 图片与页面的分配原则
+**分配原则**：图片顺序 = 文档叙事顺序。封面用 image1，第三章内容用第三章附近的图片，不要打乱顺序。
 
-演讲稿 PPT 中，图片按以下规律分配到各页：
+## SVG 图片路径修复
 
-| 主题段落 | 对应图片编号（参考） | 页面类型 |
-|----------|---------------------|----------|
-| 封面 | 可用LOGO或主题图 | 封面 |
-| 民主党派·义诊 | image5.jpeg, image6.jpeg | 内容页 |
-| 无党派人士·文化活动 | image11/13/14.jpeg | 内容页 |
-| 党外知识分子·联百企 | image12.png（专家合影）| 内容页 |
-| 活动写真汇总 | image1/2/7/8/9/17/19/21 | 图片墙 |
+如果 SVG 文件在 `svg_output/` 子目录中，`<image href="images/...">` 路径相对于**项目根目录**，而不是 SVG 文件本身：
+
+```python
+import os
+svg_dir = '<项目>/svg_output'
+for fname in os.listdir(svg_dir):
+    if fname.endswith('.svg'):
+        path = f'{svg_dir}/{fname}'
+        with open(path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        fixed = content.replace('href="images/', 'href="../images/')
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(fixed)
+```
+
+## 演讲背景PPT的图片布局原则
+
+1. **统一尺寸**：所有图片指定 `width`/`height` + `preserveAspectRatio="xMidYMid slice"` + `rx="10"` 圆角
+2. **瀑布流错落**：不同行可用不同高度，但同列宽度要协调
+3. **数据页叙事**：大数字旁必须跟叙事文字（如 "协调贷款" → "8亿元"），数字用大字号，叙事用小号字在下方说明
+4. **全幅背景**：封面/故事/结语页用 `preserveAspectRatio="xMidYMid slice"` 撑满全屏
+5. **并排展示**：同一主题的多张图片用相同尺寸并排
 
 ## 典型12页演讲稿PPT结构
 

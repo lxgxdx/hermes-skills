@@ -1,8 +1,9 @@
 {
-  "last_report_path": "/home/lxgxdx/.hermes/logs/curator/20260516-144053",
-  "last_run_at": "2026-05-16T14:40:53.825574+00:00",
-  "last_run_duration_seconds": 8.321452,
+  "last_report_path": "/home/lxgxdx/.hermes/logs/curator/20260523-144552",
+  "last_run_at": "2026-05-23T14:45:52.152350+00:00",
+  "last_run_duration_seconds": 12.495948,
   "last_run_summary": "auto: no changes; llm: skipped (no candidates)",
+  "last_run_summary_shown_at": null,
   "paused": false,
-  "run_count": 2
+  "run_count": 3
 }
