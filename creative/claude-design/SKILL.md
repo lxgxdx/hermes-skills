@@ -19,6 +19,54 @@ The goal is to preserve Claude Design's useful design behavior and taste while r
 
 **Before starting, check for other web-design skills like `popular-web-designs` (ready-to-paste design systems for Stripe, Linear, Vercel, Notion, etc.) and `design-md` (Google's DESIGN.md token spec format).** If the user wants a known brand's look, load `popular-web-designs` alongside this one and let it supply the visual vocabulary. If the deliverable is a token spec file rather than a rendered artifact, use `design-md` instead. Full decision table below.
 
+## Open Design — Self-Hosted Claude Design Alternative
+
+**nexu-io/open-design** (50k+ stars) is the open-source, local-first alternative to Claude Design. It auto-detects 16 coding-agent CLIs on PATH and drives them through 132 composable Skills and 149+ brand-grade Design Systems.
+
+**Key capabilities:**
+- Local daemon + web UI (Next.js 16)
+- **Hermes supported via ACP JSON-RPC** (`streamFormat: acp-json-rpc`) — shows your live model list including MiniMax
+- 132 built-in skills: web prototypes, dashboards, mobile apps, **PPT decks (guizang-ppt)**, social media, emails, etc.
+- 149+ design systems: Linear, Stripe, Vercel, Airbnb, Tesla, Notion, Anthropic, Apple, Cursor, Supabase, Figma, 小红书, etc.
+- BYOK proxy: paste API key + baseUrl for Anthropic/OpenAI/Azure/Gemini/Ollama endpoints
+- Export: HTML / PDF / PPTX / ZIP / Markdown
+
+**⚠️ Hermes requires native deployment (not Docker).** The Docker image is Node-only and cannot run Hermes (Python CLI). See `references/open-design-deploy.md` for the full deployment guide.
+
+**TL;DR for Hermes-capable deployment:**
+```bash
+# 1. Install Node 24
+npm install -g n && n 24 && export PATH=$HOME/.n/bin:$PATH
+
+# 2. Clone and install
+git clone https://github.com/nexu-io/open-design.git /tmp/open-design
+cd /tmp/open-design && corepack enable && pnpm install
+
+# 3. Fix inotify limit (Linux)
+echo 524288 | sudo tee /proc/sys/fs/inotify/max_user_watches
+
+# 4. Start (daemon :7457 + web :3000)
+cd /tmp/open-design
+export PATH=$HOME/.n/bin:$PATH
+export OD_DATA_DIR=/tmp/open-design/.od
+OD_DATA_DIR=/tmp/open-design/.od OD_DAEMON_URL=http://127.0.0.1:7457 pnpm tools-dev run web
+
+# Access: http://localhost:3000
+# Verify Hermes: curl -s http://127.0.0.1:7457/api/agents | grep hermes
+```
+
+**When to use Open Design vs this skill:**
+| Task | Tool |
+|------|------|
+| Interactive design sessions with sandboxed preview, skill picker, brand-grade design systems | Open Design |
+| One-off HTML artifacts, landing pages, prototypes generated directly in repo | claude-design (this skill) |
+| PPT generation with custom SVG pipeline | ppt-master |
+| Match a known brand's visual vocabulary | popular-web-designs |
+
+Open Design and this skill are complementary: use Open Design for its curated skills + design system library, use claude-design for direct artifact generation in a repo context.
+
+---
+
 ## When To Use This Skill vs `popular-web-designs` vs `design-md`
 
 Hermes has three design-related skills under `skills/creative/`. They do different jobs — load the right one (or combine them):

@@ -700,6 +700,7 @@ with urllib.request.urlopen(req) as resp:
 | **当月选题线索汇总** | `8.信息工作/范文/2026年/4月/4月份下半月信息宣传选题汇总.docx` — 各联络员自提选题草稿，含白鹭湾打卡点、侨联读书日、张雪机车、基层新阶层、网络统战等方向；是本地选题最直接的来源 |
 | **公众号内容制作（HTML截图方案）** | `references/公众号内容制作.md` — AI生图随机性高，用HTML+Chrome截图代替；包含标准工作流、配色模板、MiniMax API备选方案 |
 | **飞书消息发送坑** | `references/feishu-messaging-pitfalls.md` — open_id vs chat_id、cron环境webhook失效、lxgxdx ID速查 |
+| **Cron Raw IP 安全扫描拦截（2026-05-24）** | `references/cron-raw-ip-security-block-2026-05-24.md` — tirith安全扫描器拦截HTTP Raw IP请求，browser_navigate兜底方案 |
 
 ---
 

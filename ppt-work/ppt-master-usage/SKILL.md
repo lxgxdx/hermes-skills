@@ -327,6 +327,14 @@ def inject_notes_via_xml(output_pptx, source_pptx_with_notes):
   - GitHub: https://github.com/icip-cas/PPTAgent
   - 适合需要更高设计质量或作为对比参考
 
+- **Open Design (nexu-io/open-design)** — 开源 Claude Design 替代品，内置 guizang-ppt skill
+  - Docker 部署：`docker run -d --name open-design -p 7456:7456 -v open_design_data:/app/.od vanjayak/open-design:latest`
+  - 访问 http://127.0.0.1:7456
+  - 支持 16 种 coding agent（包括 Hermes via ACP），149+ design systems，132 skills
+  - **guizang-ppt skill** 直接可用：杂志风 PPT，支持 WebGL hero、PDF 导出
+  - 适合：交互式设计会话、sandobxed 预览、品牌级设计系统参考
+  - 注意：Docker 镜像不包含 Hermes 二进制，Hermes 作为 design engine 需要宿主机 Hermes CLI
+
 ### SVG 生成最佳实践（execute_code 路径）
 
 当内容已整理好时，用 `execute_code` 批量生成 SVG 更高效：
