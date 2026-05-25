@@ -701,6 +701,7 @@ with urllib.request.urlopen(req) as resp:
 | **公众号内容制作（HTML截图方案）** | `references/公众号内容制作.md` — AI生图随机性高，用HTML+Chrome截图代替；包含标准工作流、配色模板、MiniMax API备选方案 |
 | **飞书消息发送坑** | `references/feishu-messaging-pitfalls.md` — open_id vs chat_id、cron环境webhook失效、lxgxdx ID速查 |
 | **Cron Raw IP 安全扫描拦截（2026-05-24）** | `references/cron-raw-ip-security-block-2026-05-24.md` — tirith安全扫描器拦截HTTP Raw IP请求，browser_navigate兜底方案 |
+| **自查汇报第七大板块新增方向（2026-05-26）** | `references/自查汇报第七板块新增方向.md` — 自查汇报七大板块中唯一未写信息稿的方向（管党治党主体责任），含三大子问题及排重状态 |
 
 ---
 
@@ -877,22 +878,43 @@ with urllib.request.urlopen(req) as resp:
   2. **模型领域知识兜底**：直接用模型知识生成选题，标注"基于领域知识生成"
   3. **本地文件兜底**：从本地 docx（自查汇报、工作要点）问题章节提取方向
 
-### 7.2 search_files 对中文关键词返回 0
-- **这是工具已知局限**，`target=content` 模式对中文检索失效，无论 file_glob 设什么都返回0
-- 改用 `execute_code` 内联 Python（subprocess + python-docx）直接读取 docx 内容，比 terminal heredoc 更稳定（heredoc 的中文引号等特殊字符易引发 SyntaxError）
-- 文件名本身含中文可正常搜索：`pattern=*.docx` 按文件名搜索可用，但中文内容检索必须用 python-docx
-- `execute_code` 中读 docx 的标准模式：
+### 7.2 读取 docx 的标准方法（zipfile + 正则，最优方案）
+
+**推荐方法：zipfile + 正则** — 优于 subprocess + python-docx，无需启动子进程，中文路径完美支持：
 
 ```python
-import subprocess
-result = subprocess.run(
-    ["python3", "-c",
-     "from docx import Document; doc = Document(r'" + fpath.replace("'", "'\"'\"'") + "'); "
-     "[print(p.text.strip()) for p in doc.paragraphs if p.text.strip()]"],
-    capture_output=True, text=True, timeout=30
-)
-text = result.stdout  # 或 result.stderr
+import zipfile, re
+
+def read_docx_text(fpath):
+    """读取 docx 所有段落文本，兼容中文路径"""
+    with zipfile.ZipFile(fpath, 'r') as z:
+        with z.open('word/document.xml') as f:
+            content = f.read().decode('utf-8')
+            text = re.sub(r'<[^>]+>', ' ', content)
+            text = re.sub(r'\s+', ' ', text).strip()
+    return text
+
+# 示例：读取自查汇报
+text = read_docx_text("/mnt/nfs/2026年统战工作/6.巡查部机关/7.上报材料/中共五莲县委统战部工作情况自查汇报.docx")
+print(text[:3000])
 ```
+
+> ⚠️ **search_files 对中文内容检索失效**（`target=content` 模式对中文返回0），但对**文件名搜索可用**（`pattern=*.docx` 等 glob 模式）。中文内容检索改用 zipfile + 正则。旧版用 subprocess + python-docx 的方式仍然可用，但 zipfile 方案更简洁，优先使用。
+
+### 7.2b cron 环境下 browser_navigate + Bing 可用（2026-05-26 验证）
+
+**发现**：cron 凌晨执行时，虽然纯 HTTP 请求（Searxng、urllib）全部超时，但 `browser_navigate` 访问 Bing HTTPS 搜索页面正常返回结果。
+
+**应用场景**：当 Searxng 返回空结果，需要搜索外地经验时：
+- 直接 `browser_navigate("https://cn.bing.com/search?q=关键词+site:gov.cn")` 
+- 滚动页面查看搜索结果
+- 不要尝试 curl/urllib 做百度/Google 搜索（会超时或验证码拦截）
+
+**已验证可用的方案排序**：
+1. `browser_navigate` + Bing HTTPS → **最可靠**（2026-05-26 验证返回结果正常）
+2. `browser_navigate` + 权威新闻网站（sara.gov.cn / guancha.cn）→ 备用
+3. 模型领域知识兜底 → 标注"基于领域知识生成"
+4. 本地 docx 兜底 → 从自查汇报/工作要点提取
 
 ### 7.3 delegate_task 并发数限制
 - `max_concurrent_children` 默认值为 3，超过会报错 "Too many tasks: X provided"

@@ -133,25 +133,15 @@ for sid, source, ts in sessions:
 
 ### Step 4: 存入 GBrain
 
-⚠️ **必须用 bun 方式**，compiled binary 的 PGLite write 有 bunfs bug（`/$bunfs/root/pglite.data` ENOENT，2026-05-19 回归）。
+**native binary 方式**（2026-05-26 实测有效）：
 
-slug 格式：`daily/{date}`
-
-```bash
-cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts put daily/{date} --content '...'
-cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --slugs daily/{date}
-```
-
-**⚠️ GBrain 远程 PostgreSQL 不可用时的降级处理**：如果 `put` 报错 `database "gbrain" does not exist`（远程 Postgres 的 gbrain 数据库不存在）或 `relation "pages" does not exist`（数据库存在但 schema 未初始化），需要先初始化本地 PGLite：
+slug 格式：`daily/YYYY-MM-DD`
 
 ```bash
-# 初始化本地 PGLite（降级方案，不依赖远程 Postgres）
-cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts init --engine pglite
-
-# 然后重试 put（仍用 bun 方式）
-cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts put daily/{date} --content '...'
-cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --slugs daily/{date}
+cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain put daily/YYYY-MM-DD < file.md
 ```
+
+**embed 注意事项**：`embed --stale` 需要 EMBEDDING_BASE_URL 可达。如果 embedding service 在内网（192.168.x.x），cron 环境可能无法访问，此时 `0 chunks embedded` 是预期的环境限制，非 gbrain 工具问题。降级方案：brain 目录的 markdown 文件由 autopilot daemon 在可连通时自动 embed。
 
 ### Step 5: 确认
 

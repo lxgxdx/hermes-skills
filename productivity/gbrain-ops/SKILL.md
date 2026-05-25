@@ -23,77 +23,36 @@ description: GBrain 个人知识库操作手册。涵盖 gbrain put 必须通过
 
 **为什么**：memory 只在当前 session 有效，跨 session 会话丢失。GBrain 是持久化的，跨 session 可查。
 
-## 基本命令（2026-04-17）
+## 基本命令
 
-所有命令使用：`bun run ~/gbrain/src/cli.ts <cmd>`
+### Cron 环境下的正确调用方式（2026-05-26 实测）
 
-**推荐使用** `~/.bun/bin/bun run ~/gbrain/src/cli.ts` — 需要 bun 环境。
+**核心原则**：`PATH` 必须包含 `~/.bun/bin`。这是 native binary 能找到 bun runtime 的关键。
 
-compiled binary `/home/lxgxdx/gbrain/bin/gbrain` 在某些环境下有 bunfs bug（`ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`），但 2026-05-06 cron 实测在当前环境可用。保险起见始终用 bun 方式。
-
-### Cron/非交互环境下的正确调用方式
-
-**核心问题**：`gbrain` 的 shebang 是 `#!/usr/bin/env bun`，在 cron 环境中 `/usr/bin/env bun` 会失败——因为 cron 的 PATH 不包含 `~/.bun/bin`。
-
-**正确方式（2026-05-09 实测成功）**：直接用 bun 路径调用 compiled binary：
 ```bash
-/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain doctor --json
-/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain embed --stale
+cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain put daily/YYYY-MM-DD < file.md
+cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain embed --stale
+cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain doctor --json
 ```
 
-**原理**：`#!/usr/bin/env bun` 依赖 PATH 中有 bun，而 cron 的最小 PATH 不含 `~/.bun/bin`。直接用绝对路径调用 bun 绕过 shebang 查找。
-
-**旧方案**（仍有效但不需要了）：
+**read 操作**（compiled binary 可用）：
 ```bash
-~/.bun/bin/bun run ~/gbrain/src/cli.ts doctor --json
-~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale
+PATH="$HOME/.bun/bin:$PATH" gbrain doctor --json
+PATH="$HOME/.bun/bin:$PATH" gbrain list --limit 10
+PATH="$HOME/.bun/bin:$PATH" gbrain get <slug>
 ```
 
-**重要更新（2026-05-22）：** `cat | bun` 和 `cmd < file` 管道模式均被安全扫描器阻止，无法在 cron 中自动执行。正确方式是使用 `gbrain import <dir>` 绕过，详见 `references/gbrain-security-scan-pipe-blocked-2026-05-22.md`。
-
-**Compiled binary bunfs bug 状态（2026-05-09 更新）：**
-- 2026-04-19 记录：compiled binary 在 PGLite 模式下报 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`
-- 2026-05-09 实测：compiled binary **完全正常**，doctor 和 embed 均成功
-- 2026-05-10 实测：compiled binary **完全正常**，doctor --json 成功（250 pages，health_score 95）
-- **2026-05-19 实测（回归）**：compiled binary 的 `doctor --json` 可用（health_score: 90），但所有需要写入数据库的操作（`put`、`embed --stale`）均失败并报 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`
-- **结论**：bunfs bug 在 PGLite write 操作上存在回归。日常 read 操作（`doctor`、`list`、`get`）可用 compiled binary；write 操作（`put`、`embed`）必须用 bun 方式
-
-**当前环境实测命令（2026-05-19）：**
-```bash
-# ✅ read 操作 — compiled binary 可用
-/home/lxgxdx/gbrain/bin/gbrain doctor --json
-# 输出：{"schema_version":2,"status":"warnings","health_score":90,"checks":[...]}
-
-/home/lxgxdx/gbrain/bin/gbrain list --limit 10
-
-# ❌ write 操作 — compiled binary 失败（bunfs bug）
-/home/lxgxdx/gbrain/bin/gbrain put <slug> --content '...'
-# 错误：ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'
-
-/home/lxgxdx/gbrain/bin/gbrain embed --stale
-# 错误：ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'
-```
-
-**bun 方式（write 操作必须用）：**
+**bun 方式**（备选，所有操作均可用）：
 ```bash
 cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts put <slug> --content '...'
 cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --stale
 ```
 
-**当前环境实测命令（2026-05-10）：**
-```bash
-/home/lxgxdx/.bun/bin/bun /home/lxgxdx/.bun/bin/gbrain doctor --json
-# 输出：{"schema_version":2,"status":"warnings","health_score":95,"checks":[
-#   {"name":"resolver_health","status":"warn","message":"Could not find skills directory"},
-#   {"name":"connection","status":"ok","message":"Connected, 250 pages"},  # 从246增长到250
-#   ...]}
-```
-
-### 正确环境变量（cron/非交互shell专用）
+### 环境变量（cron/非交互shell专用）
 ```bash
 HOME=/home/lxgxdx
-BUN_INSTALL="$HOME/.bun"          # 非交互环境必须显式设置
-PATH="$BUN_INSTALL/bin:$PATH"      # bun 不在默认 PATH 中
+BUN_INSTALL="$HOME/.bun"
+PATH="$BUN_INSTALL/bin:$PATH"
 ```
 **注意**：这些变量必须存在于 shell 环境中。
 
@@ -189,7 +148,6 @@ BRAIN_DIR / (slug.replace('/', os.sep) + '.md')
 ---
 
 ## Dream Cycle（每日同步流程）
-
 每日 cron 自动执行，从 Hermès state.db 提取当日所有对话的实体，写入 brain 目录结构。
 
 ### 执行步骤
@@ -233,20 +191,17 @@ for sid, source, ts, count, title in sessions:
 
 **Step 3: gbrain doctor --json 健康检查**
 ```bash
-/home/lxgxdx/gbrain/bin/gbrain doctor --json
+cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain doctor --json
 ```
 
 **Step 4: gbrain embed --stale 更新索引**
-
-⚠️ **注意**：compiled binary 在 PGLite write 上有 bunfs bug 回归（2026-05-19 实测），需要用 bun 方式：
 ```bash
-cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --stale
+cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain embed --stale
 ```
 
-如果 bun 方式也失败（`/$bunfs/root` 路径问题），页面已写入 ~/brain/ 目录，待环境修复后手动 sync。
+⚠️ **embed --stale 返回 0 chunks 的排查**：若 embedding service（192.168.88.68:8081）在 cron 环境不可达，返回 `0 chunks embedded` 是预期的环境限制，非 gbrain 工具问题。页面已写入 ~/brain/ 目录，autopilot daemon 连通后自动补全。
 
 ### Brain 目录结构
-
 ```
 ~/brain/
 ├── people/       — 人物页
@@ -255,12 +210,12 @@ cd ~/gbrain && /home/lxgxdx/.bun/bin/bun run src/cli.ts embed --stale
 └── (其他按需创建)
 ```
 
-### Dream Cycle 执行状态（2026-05-19）
+### Dream Cycle 执行状态（2026-05-26）
 
-- 实体提取：6 个 cron session，18 个实体
-- Brain 页面写入：3 个新页面（song-jianhai.md、tongzhan-info-topics.md、pve-wiki.md）
-- doctor：通过，health_score 90（resolver + connection warnings）
-- embed --stale：❌ compiled binary bunfs bug 回归，bun 方式未测试（环境问题）
+- 实体提取：10个 cron session，4个含实际内容（00:00/01:00/02:00-02:02）
+- Brain 页面写入：2个页面更新（pve-wiki.md、tongzhan-info-topics.md）
+- doctor：✅ health_score 90（resolver + connection warnings）
+- embed --stale：⚠️ embedding service 内网不可达（环境限制），0 chunks
 
 ---
 
@@ -794,9 +749,8 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 
 ## 已知问题速查
 |------|------|------|
-| compiled binary 报 ENOENT (bunfs bug) | 仅限某些环境 | 2026-05-06 cron 实测：compiled binary 在当前环境可用，但保险起见仍用 bun 方式 |
-| 0 chunks embedded | 直接写文件没走 stdin | 用 `gbrain put slug --content '...'` |
-| query 返回空或极低分 | 环境变量未设置或 Infinity 离线 | 检查 `EMBEDDING_BASE_URL` / `USE_LOCAL_INFINITY`，验证 Infinity 在线 |
+| compiled binary 报 ENOENT (bunfs bug) | 仅限 HOME 环境变量缺失时 | 2026-05-26 实测：PATH 含 ~/.bun/bin 时 native binary 所有操作正常 |
+| 0 chunks embedded | embedding service 内网不可达 | cron 环境网络限制；brain 文件由 autopilot daemon 连通后自动 embed |
 | subprocess input=bytes 报错 | 要求 str | `input=content` 而非 `.encode()` |
 | `list` 显示的页面文件系统里没有 | 数据库和文件系统独立 | 用 `get <slug>` 从数据库读，不从文件读 |
 | `gbrain put` 后文件系统没变化 | 正常现象 | 内容在数据库，不在文件系统 |
