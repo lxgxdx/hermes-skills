@@ -747,6 +747,7 @@ hermes gateway start  # start fresh (NOT restart)
 - **Discord bot silent**: Must enable **Message Content Intent** in Bot → Privileged Gateway Intents.
 - **Slack bot only works in DMs**: Must subscribe to `message.channels` event. Without it, the bot ignores public channels.
 - **Windows HTTP 400 "No models provided"**: Config file encoding issue (BOM). Ensure `config.yaml` is saved as UTF-8 without BOM.
+- **Feishu `open_id cross app` (99992361)**: Tenant access token's app and target user's open_id are from different Feishu apps. See `references/feishu-platform-issues.md` for root cause and solutions. This has been broken for 22+ days for user `oc_7c656031826c26b15f17d010097f3619`.
 
 ### Auxiliary models not working
 If `auxiliary` tasks (vision, compression, session_search) fail silently, the `auto` provider can't find a backend. Either set `OPENROUTER_API_KEY` or `GOOGLE_API_KEY`, or explicitly configure each auxiliary task's provider:
