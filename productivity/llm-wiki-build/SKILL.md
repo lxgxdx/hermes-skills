@@ -133,7 +133,8 @@ delegate_task(tasks=[
 ```
 
 **经验**：
-- 每个 subagent 独立读取源文档、写入目标文件，无需主 agent 中转数据
+- ⚠️ **关键警告**：subagent 独立读取源文档后写入的是原始内容，不会自动提炼成结构化 wiki 页面。对于 concept 页面，必须由主 agent 编写结构化内容，subagent 只能辅助执行（如保存文件、验证格式）。
+- **正确做法**：主 agent 先读完源文档、提炼结构化内容，再由 subagent 写入文件；或主 agent 直接 write_file。
 - 5个页面并行约60-90秒完成，单 agent 串行需要5倍以上时间
 - 适合20+页面规模的大批量创建；少量页面（1-3个）直接串行更简单
 - **4页场景实测（2026-05-07）**：2个并行 subagent（各带2个任务）完成约65秒；同等规模5并行反而 overhead 更大。批量小时减少并行数可提升效率。
@@ -147,7 +148,7 @@ delegate_task(tasks=[
 - Frigate Wiki: `~/wiki/`
 - Klipper Wiki: `~/klipper-wiki/`
 - Home Assistant Wiki: `~/ha-wiki/`（2026-04-20 新建，与 Frigate 完全独立）
-- PVE Wiki: `~/pve-wiki/`（2026-05-07 新建，虚拟化平台）
+- PVE Wiki: `~/pve-wiki/`（2026-05-07 新建，虚拟化平台，支持 GPU 直通和 Frigate 部署）
 - GBrain：对话记忆/碎片想法，与 LLM Wiki 分工明确
 
 ## 多项目 Wiki 并行构建（2026-04-20 经验）

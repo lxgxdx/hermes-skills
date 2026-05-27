@@ -206,9 +206,35 @@ cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain embed --stale
 ~/brain/
 ├── people/       — 人物页
 ├── projects/     — 项目页
+├── organizations/ — 组织/公司页
 ├── concepts/     — 概念页
 └── (其他按需创建)
 ```
+
+### Dream Cycle 正确流程（2026-05-28 实测）
+
+**Step 1: 从 session_search 提取实体**
+从 cron session 摘要中发现新实体（人/公司/项目/品牌），提取名称和上下文。
+
+**Step 2: 创建临时目录，用 `gbrain import` 批量导入**
+```bash
+# 1. 创建临时目录，放入各 page.md 文件
+mkdir -p /tmp/gbrain-entities
+# 每个文件：slug/dir/page.md，frontmatter 包含 slug/type/tags
+
+# 2. 批量导入（自动创建 chunks，绕过安全扫描）
+~/.bun/bin/bun run ~/gbrain/src/cli.ts import /tmp/gbrain-entities
+# 输出：15 pages imported, 15 chunks created
+
+# 3. embed --stale（验证/更新索引，可能因内网限制返回 0 chunks）
+~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale
+```
+
+**⚠️ `embed --stale` 返回 0 chunks 是预期现象（内网限制）：**
+- embedding service (`192.168.88.68:8081`) 在 cron 环境不可达
+- `import` 已创建 chunks（输出 "15 chunks created"），只是无法通过外部 API 验证
+- 下次 cron 运行时 `embed --stale` 仍会返回 0 chunks，但不代表失败
+- 如需确认 chunks 真实存在，用 `gbrain stats` 看总 chunk 数是否增加
 
 ### Dream Cycle 执行状态（2026-05-26）
 

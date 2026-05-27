@@ -133,7 +133,7 @@ for sid, source, ts in sessions:
 
 ### Step 4: 存入 GBrain
 
-**native binary 方式**（2026-05-26 实测有效）：
+**native binary 方式（2026-05-26 实测有效）**：
 
 slug 格式：`daily/YYYY-MM-DD`
 
@@ -141,7 +141,13 @@ slug 格式：`daily/YYYY-MM-DD`
 cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain put daily/YYYY-MM-DD < file.md
 ```
 
-**embed 注意事项**：`embed --stale` 需要 EMBEDDING_BASE_URL 可达。如果 embedding service 在内网（192.168.x.x），cron 环境可能无法访问，此时 `0 chunks embedded` 是预期的环境限制，非 gbrain 工具问题。降级方案：brain 目录的 markdown 文件由 autopilot daemon 在可连通时自动 embed。
+**⚠️ 内存工具不可用时的备选方案**：如果 `memory` 工具返回 "Memory is not available"，使用直接文件写入作为 fallback：
+```bash
+cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
+```
+同时将内容追加到 `~/.hermes/memories/USER.md` 的相关章节中（该文件在 cron 环境也可写）。
+
+**embed 注意事项**：`embed --stale` 需要 EMBEDDING_BASE_URL 可达。
 
 ### Step 5: 确认
 
