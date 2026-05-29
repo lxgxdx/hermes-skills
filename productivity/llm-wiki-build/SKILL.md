@@ -141,6 +141,74 @@ delegate_task(tasks=[
 - 批量大时让 subagent 一次处理多个页面（`tasks` 数组），减少任务启动 overhead
 - Klipper 45页实测：分9批（每批5个），全部完成约2小时（含并发延迟）
 
+## 政策文件 Wiki（统战/政府领域）的特殊格式
+
+与纯技术文档不同，政策文件 wiki 需要以"**发现制度问题**"为核心目标：
+
+```markdown
+---
+title: 政策名称
+created: YYYY-MM-DD
+updated: YYYY-MM-DD
+type: entity
+tags: [policy, 领域, 问题标注]
+sources: [源文件或领域知识补充标注]
+---
+
+# 政策名称
+
+## 基本信息
+- 发布机关：
+- 文号：
+- 生效日期：
+
+## 核心规定（摘要）
+- 关键条款摘要（不抄原文，提炼核心）
+
+## 执行层面问题标注 ⚠️
+- **模糊地带**：条款中用词模糊（如"原则上""视情况"）的地方
+- **执行空白**：有要求但没有配套细则的地方
+- **多部门协调**：涉及多个部门但职责边界不清的地方
+- **监督缺失**：有规定但无追责条款的地方
+- **评估机制缺失**：政策发布后无跟踪评估机制
+
+## 典型案例/新闻
+（违反该规定或因该规定不完善引发的新闻案例）
+
+## 关联页面
+- [[相关政策]]
+- 关联外部知识库（如 government-law-wiki）
+```
+
+**注意**：
+- 重点不是抄原文，而是标注**执行层面的模糊地带和空白点**
+- 找不到原文时，用领域知识补充，但标注"基于领域知识"
+- 关联其他知识库（如 government-law-wiki）时，在 sources 和关联页面中标注
+
+## cron 自动化 Wiki 建设
+
+每天定时（如凌晨01:30）构建政策知识库的流程：
+
+1. **读取提纲**：读取 `~/wiki/tongzhan-work-outline.md`，找状态为"待建设"的政策
+2. **优先级顺序**：按提纲中的编号顺序（P01、P02...）或重要性排序
+3. **搜索政策原文**：优先访问权威政府网站
+   - 中央统战部：http://www.zytzb.gov.cn/
+   - 国家宗教局：http://www.sara.gov.cn/
+   - 国台办：http://www.gwytb.gov.cn/
+   - 国务院政策文件库：https://www.gov.cn/zhengce/
+4. **提取核心条款 + 标注问题**
+5. **搜索执行案例**：用 Bing 搜索 `政策关键词+问题+site:gov.cn`
+6. **更新 index.md 和提纲状态**
+
+**日期格式**：cron 任务中日期用 `YYYY-MM-DD`（如 2026-05-30）
+
+## 政府网站访问技巧
+
+- **gov.cn 自动跳转**：访问 `gov.cn` 页面可能自动跳转到首页，URL 可能变化
+- **国台办（gwytb.gov.cn）**：政策措施页面 URL 结构可能变化，尝试从首页导航
+- **搜索政府文件**：用 Bing 搜索 `site:gov.cn` + 政策名称
+- **找不到原文**：基于领域知识补充，在 sources 中标注"基于领域知识"
+
 ## Wiki 路径
 
 **按领域分目录，每项目独立，不混用。**
@@ -148,7 +216,8 @@ delegate_task(tasks=[
 - Frigate Wiki: `~/wiki/`
 - Klipper Wiki: `~/klipper-wiki/`
 - Home Assistant Wiki: `~/ha-wiki/`（2026-04-20 新建，与 Frigate 完全独立）
-- PVE Wiki: `~/pve-wiki/`（2026-05-07 新建，虚拟化平台，支持 GPU 直通和 Frigate 部署）
+- PVE Wiki: `~/pve-wiki/`（虚拟化平台，支持 GPU 直通和 Frigate 部署）
+- 统战知识库: `~/wiki/`（与 Frigate Wiki 共存，用 `concepts/`, `entities/` 子目录区分）
 - GBrain：对话记忆/碎片想法，与 LLM Wiki 分工明确
 
 ## 多项目 Wiki 并行构建（2026-04-20 经验）

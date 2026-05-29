@@ -163,3 +163,15 @@ Pick the closest existing category. Don't invent new top-level categories casual
 - [ ] Structure: `# Title` → `## Overview` → `## When to Use` → body → `## Common Pitfalls` → `## Verification Checklist`
 - [ ] `related_skills` references resolve in-repo (or are explicitly OK to be user-local)
 - [ ] `git add skills/<category>/<name>/ && git commit` completed on the intended branch
+
+## Appendix: Evolving an Existing Skill from Historical Conversations
+
+When the user says "optimize this skill based on historical conversations" or similar, follow the workflow in `references/skill-evolution-from-history.md`:
+
+1. Read the full SKILL.md
+2. Search broadly across sessions for lessons
+3. Categorize into: workflow corrections, preferences, fallback updates, validation gaps, context checks
+4. Apply targeted patches (not full rewrites)
+5. Record evolution in `references/YYYY-MM-DD-evolution-notes.md`
+
+Key insight: self-evolution tools can only optimize invocation wrappers, not skill content. Content improvements are manual.
