@@ -67,3 +67,47 @@ tesseract image.jpg stdout -l chi_sim  # 命令行使用
 ```bash
 ssh root@<unraid-ip> "nvidia-smi --query-gpu=memory.free,memory.total --format=csv,noheader"
 ```
+
+---
+
+## Deployment: Unraid Tesla P4
+
+> See `unraid-p4-ocr-deploy` skill for the complete deployment guide (Unraid Docker UI, CA template,镜像选择, docker-compose.yml). See `easyocr-unraid-p4-deploy` skill for a fully实测 (2026-04-22) Dockerfile + api.py with exception handling, numpy<2 fix, and PyMuPDF PDF support. Key facts:
+
+- **Correct image**: `paddlecloud/paddleocr:2.6-gpu-cuda11.2-cudnn8-latest` — NOT `paddlepaddle/paddleocr-gpu` (doesn't exist)
+- **EasyOCR vs PaddleOCR**: EasyOCR ~500MB VRAM, PaddleOCR 1.5-2.5GB; EasyOCR preferred for VRAM-constrained P4
+- **EasyOCR Dockerfile**: Use `pytorch/pytorch:2.2.0-cuda11.8-cudnn8-runtime` base; fix `numpy<2` ordering; `opencv-python-headless<=4.9.0.80`; always rebuild with `--no-cache`
+- **Port**: `8008:8008`, health check at `http://<unraid-ip>:8008/health`
+- **Unraid method**: Use Docker UI (not `docker compose` CLI)
+
+---
+
+## Troubleshooting
+
+> See `ocr-api-troubleshooting` skill for the complete diagnostic guide. Key patterns:
+
+**Health passes but OCR returns 500**: GPU failure is silent — EasyOCR doesn't always raise clear errors when GPU access fails. Check:
+1. CUDA driver match: `nvidia-smi` on host vs container CUDA version
+2. GPU visibility: `torch.cuda.is_available()` inside container
+3. GPU memory: other services (Infinity vector service) consuming VRAM
+4. Fallback to CPU: set `gpu=False` in `easyocr.Reader()` initialization
+
+**Prevention**: Implement graceful degradation in `api.py`:
+```python
+try:
+    reader = easyocr.Reader(["en"], gpu=True, verbose=False)
+except Exception as e:
+    reader = easyocr.Reader(["en"], gpu=False, verbose=False)
+```
+
+**Emergency fix (no SSH)**: Stop container via Unraid UI → edit `api.py` to `gpu=False` → rebuild with `--no-cache` → restart.
+
+---
+
+## Key Takeaways
+
+1. **VRAM估算必须实测** — 官方数字往往偏高，EasyOCR实测仅~500MB
+2. **健康检查通过 ≠ OCR工作** — 必须做功能测试
+3. **GPU失败是静默的** — EasyOCR不会总抛出明确错误
+4. **CPU fallback是生产可靠性保障**
+5. **镜像名要核实** — `paddlepaddle/paddleocr-gpu` 不存在

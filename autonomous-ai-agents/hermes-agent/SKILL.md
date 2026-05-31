@@ -756,6 +756,21 @@ hermes config set auxiliary.vision.provider <your_provider>
 hermes config set auxiliary.vision.model <model_name>
 ```
 
+### Session & Memory Debugging (Deep-Dive Skills)
+
+#### `hermes-session-stuck-debug` — Session Stuck Diagnosis
+> Handles sessions that freeze/hang waiting for tool responses. Common root causes:
+> - Invalid tool arguments (malformed JSON, wrong types)
+> - Tool handler that never returns
+> - LLM that never generates a response
+> See `hermes-session-stuck-debug` skill for full diagnostic workflow and recovery commands.
+
+#### `hermes-memory-debug` — Memory Tool Diagnosis
+> Handles the `memory` tool failing to read/write. Key facts:
+> - Memory lives in `~/.hermes/memories/` (MEMORY.md, USER.md) — NOT cloud storage
+> - The `memory` tool may be unavailable/disabled; direct file I/O is the fallback
+> - See `hermes-memory-debug` skill for the `mempalace` plugin reference and memory-backend options
+
 ---
 
 ## Where to Find Things

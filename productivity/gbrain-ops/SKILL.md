@@ -197,10 +197,12 @@ cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain doctor --json
 
 **Step 4: gbrain embed --stale 更新索引**
 ```bash
-cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain embed --stale
+cd ~/brain && ~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale
 ```
 
-⚠️ **embed --stale 返回 0 chunks 的排查**：若 embedding service（192.168.88.68:8081）在 cron 环境不可达，返回 `0 chunks embedded` 是预期的环境限制，非 gbrain 工具问题。页面已写入 ~/brain/ 目录，autopilot daemon 连通后自动补全。
+⚠️ **必须用 `bun run` 而非 compiled binary**：`gbrain embed --stale`（compiled binary）会触发 bunfs bug 报错 `ENOENT: no such file or directory, open '/$bunfs/root/pglite.data'`，即使 PGLite 已初始化。这是因为 compiled binary 的 bunfs 路径解析与 `bun run` 不同。**所有涉及数据库读写的命令都用 `bun run src/cli.ts`。**
+
+⚠️ **embed --stale 返回 0 chunks 的排查**：若 embedding service（192.168.88.68:8081）在 cron 环境不可达，返回 `0 chunks embedded` 是预期的环境限制，非 gbrain 工具问题。页面已写入 ~/brain/ 目录，autopilot daemon 连通后自动补全。若确认 Infinity 服务可达但仍 0 chunks，参见上方"嵌入维度不匹配问题"。
 
 ### Brain 目录结构
 ```
@@ -223,11 +225,16 @@ cd ~/brain && PATH="$HOME/.bun/bin:$PATH" gbrain embed --stale
 mkdir -p /tmp/gbrain-entities/<type>/<slug>
 # 每个文件：<type>/<slug>/page.md
 
-# ⚠️ 关键：frontmatter 中不要写 slug: 字段！
+**⚠️ 关键：frontmatter 中不要写 slug: 字段！**
 # gbrain import 根据路径 derive slug，如果 frontmatter slug 与路径-derived slug 不匹配会跳过
 # 正确：page.md 中只有 name/type/tags
 # 错误：slug: dream-cycle-2026-05-30  （这会导致 frontmatter slug "dream-cycle-2026-05-30" 
 #                                         与路径 "people/dream-cycle-2026-05-30/page" 不一致而跳过）
+
+**⚠️ YAML title 引号陷阱：**
+- 标题中如含双引号，**禁止套娃引号**：`title: "31条"惠台措施` 会导致 YAML 解析失败（multiline key error）
+- 正确做法：去掉内嵌引号改为 `title: 31条惠台措施`，或外套双引号、内嵌单引号
+- 详见 `references/gbrain-yaml-pitfalls-2026-05-31.md`
 
 
 # 2. 批量导入（自动创建 chunks，绕过安全扫描）
@@ -783,6 +790,7 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 
 ## 已知问题速查
 |------|------|------|
+| compiled binary `embed --stale` 报 ENOENT bunfs bug | compiled binary bunfs 路径解析与 bun run 不同 | 必须用 `~/.bun/bin/bun run ~/gbrain/src/cli.ts embed --stale` |
 | compiled binary 报 ENOENT (bunfs bug) | 仅限 HOME 环境变量缺失时 | 2026-05-26 实测：PATH 含 ~/.bun/bin 时 native binary 所有操作正常 |
 | 0 chunks embedded | embedding service 内网不可达 | cron 环境网络限制；brain 文件由 autopilot daemon 连通后自动 embed |
 | subprocess input=bytes 报错 | 要求 str | `input=content` 而非 `.encode()` |

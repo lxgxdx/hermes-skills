@@ -518,3 +518,10 @@ for g in json.load(sys.stdin):
 ## See Also
 
 - `references/github-large-file-pitfalls.md` — GitHub's 100 MB file size limit, `.curator_backups/` exclusion patterns, BFG repo-cleaner, and Git LFS setup
+
+### `codebase-inspection` — Codebase Size and LOC Analysis
+> Use `pygount` to analyze codebase size, language distribution, and file counts. Useful for:
+> - Finding which languages dominate a codebase before PR review
+> - Detecting bloat (test files vs source files ratio)
+> - `references/codebase-inspection-commands.md` for full pygount syntax and interpretation
+> See `codebase-inspection` skill for the complete guide.
