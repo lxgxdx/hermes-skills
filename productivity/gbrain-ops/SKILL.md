@@ -251,12 +251,85 @@ mkdir -p /tmp/gbrain-entities/<type>/<slug>
 - 下次 cron 运行时 `embed --stale` 仍会返回 0 chunks，但不代表失败
 - 如需确认 chunks 真实存在，用 `gbrain stats` 看总 chunk 数是否增加
 
+### ⚠️ Wiki→Brain 桥接（2026-06-02 实战发现）
+
+**问题**：`llm-wiki-build` cron 任务（每天 01:30）会把新政策/概念页写到 `~/wiki/entities/*.md`，**但不会自动 push 到 gbrain 向量数据库**。结果：wiki 文件系统有内容，`gbrain list` 看不到 → 用户搜索时漏掉这些页面。
+
+**Dream Cycle 必须在 Step 2 之前增加 wiki 同步步骤**。
+
+**自动化脚本**：`scripts/dream-cycle-wiki-bridge.sh`（本 skill 自带，幂等可重跑）
+
+```bash
+# 默认扫描近 2 天修改的 wiki 页面
+./scripts/dream-cycle-wiki-bridge.sh
+
+# 自定义回溯天数
+./scripts/dream-cycle-wiki-bridge.sh --days 7
+
+# 干跑（不实际导入）
+./scripts/dream-cycle-wiki-bridge.sh --dry-run
+```
+
+脚本逻辑：
+1. `find ~/wiki/entities -mtime -N` 找到最近修改的 wiki 页面
+2. `gbrain list --limit 500` 拿到所有 DB slug，对比哪个 wiki 页不在 DB
+3. 缺失的页面 staging 到 `/tmp/gbrain-dream-YYYY-MM-DD/entities/<slug>/page.md`
+4. `gbrain import` 批量导入（`import` 幂等，已存在会跳过）
+
+**手动流程**（如果不想跑脚本）：
+
+```bash
+# 1. 找出 ~/wiki/entities/ 下最近修改的 .md（近 2 天内）
+find ~/wiki/entities/ -name "*.md" -mtime -2
+
+# 2. 与 gbrain 数据库对比，找出 DB 中缺失的 wiki 页面
+# （通过 gbrain list 拿到数据库 slug，对比文件名）
+
+# 3. 对每个缺失页面：用 gbrain import 导入
+# 关键：必须先检查 frontmatter 已有 slug/title/type/tags，再决定是否要重新组织
+# 复制到 /tmp/gbrain-dream-YYYY-MM-DD/entities/<slug>/page.md 即可，import 会自动 derive slug
+mkdir -p /tmp/gbrain-dream-$(date +%F)/entities/<slug>
+cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.md
+~/.bun/bin/bun run ~/gbrain/src/cli.ts import /tmp/gbrain-dream-$(date +%F)
+```
+
+**实战（2026-06-02）**：`llm-wiki-build` 创建了 `~/wiki/entities/policy-religious-venue.md`（宗教活动场所管理办法，2026-06-02 01:42），dream cycle 02:00 检测到 → 导入 gbrain → brain pages 82→83, entities 3→4。
+
+**判断"wiki 页面不在 brain 中"的快速方法**：
+- `gbrain list --limit 300` 拿到所有 slug
+- wiki 实体名通常以 `policy-*`、`project-*`、`concept-*` 开头
+- 缺哪个就补哪个
+
+### ⚠️ 全 cron 日的 Dream Cycle 行为（2026-06-02 实测）
+
+**场景**：用户整天没说话，所有 session 都是 cron 任务（`source=cron`）。**不要因此跳过 dream cycle**——cron 任务本身会产生新实体（如 wiki 同步、选题库写入、daily work log）。
+
+**正确处理**：
+1. 先查 `state.db` 中 `GROUP BY source` 确认是否全 cron
+2. 即使全 cron，也要按 wiki→brain 桥接、daily work log、project/concept 增量等子步骤执行
+3. **不要把"无新人物/公司"当作"无事可做"**——cron 任务产出的 wiki 页面/选题/日志同样是新内容
+
+**全 cron 日的典型 cron session 类型**（用于判断需触发哪个子流程）：
+- `daily-work-log` → 检查是否有 `daily/YYYY-MM-DD` 页面需要写入 brain
+- `tongzhan-info-选题` → 检查是否产出新选题实体
+- `llm-wiki-build` / `tongzhan-wiki-build` → **最常见**，按上面 wiki→brain 桥接处理
+- `pve-wiki-例行检查` → 一般无新内容，跳过
+
 ### Dream Cycle 执行状态（2026-05-26）
 
 - 实体提取：10个 cron session，4个含实际内容（00:00/01:00/02:00-02:02）
 - Brain 页面写入：2个页面更新（pve-wiki.md、tongzhan-info-topics.md）
 - doctor：✅ health_score 90（resolver + connection warnings）
 - embed --stale：⚠️ embedding service 内网不可达（环境限制），0 chunks
+
+### Dream Cycle 执行状态（2026-06-02）
+
+- 实体提取：7 个 cron session，4 个含实际内容；**全 cron 日，无人类对话**
+- Wiki→Brain 桥接：1 个新实体（policy-religious-venue）
+- doctor：✅ health_score 85（resolver/pgvector/RLS warnings — doctor 误报，非真实问题）
+- embed --stale：0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 82→83, chunks 156→158, embedded 156→158, entities 3→4
+- 详细记录：`references/dream-cycle-2026-06-02.md`
 
 ---
 
@@ -808,6 +881,9 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `embed --stale` 显示 "0 chunks embedded" | 同上，嵌入维度不匹配 | 同上 |
 | `cat | bun` 报 "approval_required" | 触发 Pipe to interpreter 安全扫描 | 用文件重定向代替管道：`bun run ... < /tmp/file.md` |
 | `cat | python3` 或 `python3 << 'EOF'` 报 "approval_required" | tirith:pipe_to_interpreter 安全策略阻止所有管道到解释器 | 用 `write_file` 写脚本到文件，再用 `python3 /tmp/script.py` 执行 |
+| wiki 实体页在 `~/wiki/entities/` 但 `gbrain list` 找不到 | `llm-wiki-build` 只写文件系统，不 push 到 brain 向量库 | Dream cycle 必须加 wiki→brain 桥接步骤（`find -mtime -2` + `gbrain import`） |
+| 全 cron 日 dream cycle 跳过导致 wiki 增量丢失 | "无人类对话"被误判为"无事可做" | cron 任务本身产 wiki 页面/选题/日志，仍按 wiki→brain 桥接处理 |
+| `doctor --json` 显示 resolver_health/pgvector/RLS warnings | doctor 的某些检查项在 cron 环境路径解析有 bug | 不影响真实功能；用 `gbrain stats` 验证实际连接 |
 
 ---
 

@@ -41,14 +41,26 @@ OpenAI's multilingual speech recognition model.
 ### Installation
 
 ```bash
-# Requires Python 3.8-3.11
-pip install -U openai-whisper
+# Requires Python 3.8-3.11 and ffmpeg
 
-# Requires ffmpeg
+# DO NOT use pip directly in hermes-agent venv — venv has no pip module
+# Use uv instead (available at ~/.local/bin/uv or system-wide):
+
+uv venv /home/lxgxdx/whisper-venv --python 3.11
+uv pip install --python /home/lxgxdx/whisper-venv/bin/python openai-whisper
+
+# Activate before use:
+source /home/lxgxdx/whisper-venv/bin/activate
+
+# Requires ffmpeg:
 # macOS: brew install ffmpeg
 # Ubuntu: sudo apt install ffmpeg
 # Windows: choco install ffmpeg
 ```
+
+**Pitfall — venv pip module missing:** If `python3 -m pip` fails with `No module named pip`, the venv was created without pip. Recreate with `uv venv` above. Do NOT try to `pip install pip` or modify the venv — just recreate it.
+
+**Pitfall — model download on first load:** `whisper.load_model()` downloads the model (~461MB for `small`) on first run. This can take 1-2 minutes on slow connections — this is normal, not a hang.
 
 ### Basic transcription
 
@@ -92,17 +104,28 @@ model = whisper.load_model("turbo")  # Fastest, good quality
 
 ## Transcription options
 
-### Language specification
+### Chinese government meeting transcription
+
+Government meetings involve multiple speakers, formal vocabulary, and policy terminology.
+Supplying a domain-specific `initial_prompt` dramatically improves accuracy:
 
 ```python
-# Auto-detect language
-result = model.transcribe("audio.mp3")
-
-# Specify language (faster)
-result = model.transcribe("audio.mp3", language="en")
-
-# Supported: en, es, fr, de, it, pt, ru, ja, ko, zh, and 89 more
+result = model.transcribe(
+    "meeting.wav",
+    language="zh",
+    initial_prompt=(
+        "这是一段政府部务会会议录音，与会人员包括多位领导干部，"
+        "讨论统战工作相关议题。"
+    )
+)
 ```
+
+**Chinese meeting transcription workflow:**
+1. Pre-check audio duration with `ffprobe -v quiet -show_entries format=duration -of csv=p=0 file.wav`
+2. Files <1 min may be truncated/incomplete — check size before processing
+3. Long files (>30 min) may degrade; consider splitting with `ffmpeg -i in.wav -ss 0 -t 3600 part1.wav -ss 3600 part2.wav`
+4. Use `small` model for Chinese (good quality/speed balance on CPU)
+5. Output raw text first, then use an LLM to structure into meeting minutes format
 
 ### Task selection
 
@@ -129,6 +152,23 @@ result = model.transcribe(
 # - Proper nouns
 # - Domain-specific vocabulary
 ```
+
+### Quick file inspection before transcribing
+
+```bash
+# Check duration — files <5 seconds are truncated, skip them
+ffprobe -v quiet -show_entries format=duration -of csv=p=0 file.wav
+# Check audio quality
+ffprobe -v quiet -show_entries stream=channels,sample_rate,codec_name -of csv=p=0 file.wav
+# Check volume levels
+ffmpeg -i file.wav -af volumedetect -f null /dev/null 2>&1 | grep -E "max_volume|mean_volume"
+```
+
+**Heuristics:**
+- <5 seconds → truncated/invalid, skip
+- ADPCM codec (adpcm_ms) → low quality, expect poor accuracy with small model
+- mean_volume < -25 dB → too quiet, preprocess with volume boost
+- audio check is essential before starting a long transcription; a 60-minute transcription failing due to a bad file wastes an hour
 
 ### Timestamps
 
@@ -189,6 +229,52 @@ for audio_file in audio_files:
     with open(output_file, "w") as f:
         f.write(result["text"])
 ```
+
+## CPU-optimized transcription (faster-whisper)
+
+For CPU-based transcription (no GPU), **always use faster-whisper** instead of openai-whisper.
+It supports int8 quantization and runs 4× faster with comparable accuracy.
+
+```bash
+uv pip install faster-whisper
+```
+
+```python
+from faster_whisper import WhisperModel
+
+# CPU optimized — int8 gives 4× speedup over openai-whisper float32
+model = WhisperModel("medium", device="cpu", compute_type="int8")
+
+segments, info = model.transcribe("audio.wav", language="zh")
+
+for segment in segments:
+    print(f"[{segment.start:.2f}s -> {segment.end:.2f}s] {segment.text}")
+```
+
+### Recommended models by use case (CPU only)
+
+| Scenario | Model | faster-whisper compute_type | Notes |
+|----------|-------|----------------------------|-------|
+| Quick test / short clip | `tiny` or `base` | int8 | ~instant |
+| English podcast/lecture | `small` | int8 | Good balance |
+| **Chinese meeting (low quality)** | **`medium`** | **int8** | **Minimum for government/formal context** |
+| Chinese meeting (clean audio) | `small` | int8 | Acceptable with initial_prompt |
+| Max accuracy (any language) | `large-v3` | int8 | Slow but best |
+
+**Critical finding — Chinese government meeting audio:** Low-bitrate WAV files (ADPCM, 32kHz mono) produce extremely poor results with `small` model — names, policy terms, and numbers are consistently misrecognized. `medium` int8 is the practical minimum for usable quality. Even with medium, expect ~70-80% accuracy; use an LLM pass to correct terminology afterward.
+
+### Audio preprocessing (required for low-quality recordings)
+
+Before transcribing low-bitrate or noisy audio, always normalize and resample:
+
+```bash
+ffmpeg -y -i original.wav \
+  -af "highpass=f=200,lowpass=f=8000,volume=1.5,alimiter=limit=0.95" \
+  -ar 16000 -ac 1 -acodec pcm_s16le \
+  output_norm.wav
+```
+
+The filter chain: highpass removes rumble (f=200), lowpass removes high-frequency noise (f=8000), volume boosts quiet speech, alimiter prevents clipping. Output: 16kHz mono PCM — Whisper's optimal input.
 
 ## Real-time transcription
 

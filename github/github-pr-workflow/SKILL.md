@@ -497,7 +497,7 @@ GITHUB_TOKEN=$(grep "^GITHUB_TOKEN=" ~/.hermes/.env | head -1 | cut -d= -f2 | tr
 
 ### PAT Retrieval (When Token is Redacted)
 
-> See `github-pat-retrieval` skill for full details.
+> See `references/push-protection-secrets.md` for full details on redaction patterns, what they mean, and how to avoid triggering Push Protection.
 
 If a PAT sent via chat gets redacted (`ghp_xx...xxxx`), recover from git config raw bytes:
 
@@ -505,7 +505,7 @@ If a PAT sent via chat gets redacted (`ghp_xx...xxxx`), recover from git config 
 python3 -c "
 with open('/path/to/.git/config', 'rb') as f:
     raw = f.read()
-start = raw.find(b'TOKEN_PREFIX')
+start = raw.find(b'TOKEN_PREFIX')  # replace with your token's prefix
 end = raw.find(b'@', start)
 print(raw[start:end].decode('utf-8'))
 "
@@ -515,11 +515,24 @@ print(raw[start:end].decode('utf-8'))
 
 ### Push Protection Gotcha
 
-GitHub Push Protection may block commits containing PAT examples. Use fake tokens in reference files:
+> See `references/push-protection-secrets.md` for full details including the re-clone recovery pattern.
+
+GitHub Push Protection scans **every push** for secret patterns — not just code blocks, but also prose, comments, string literals, and variable names. A single `ghp_` prefix in any context will trigger a block.
+
+**Common triggers:**
+- Inline text: `` `ghp_Fc...ZhBU` `` (even inside backticks as an example)
+- Python byte literals: `b'ghp_'` in example code
+- URL fragments: `https://user:ghp_xxx@github.com/...`
+- Variable names or comments mentioning the pattern
+
+**Safe token placeholders:**
 ```
 # GOOD: TOKEN_NAME_HERE
-# BAD: TOKEN_PREFIX_HERE
+# GOOD: YOUR_TOKEN_HERE
+# GOOD: ghp_xx...xxxx  (clearly fake — not a real prefix)
 ```
+
+**Recovery when blocked:** If a commit is already blocked, a fresh clone is often needed to escape the stale index state. See the reference file for the step-by-step.
 
 ---
 

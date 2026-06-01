@@ -290,6 +290,11 @@ editor.format_numbers(5, "#,##0.00")
 editor.save("工资表.xlsx")
 ```
 
+## 参考文件
+
+- `references/经验类信息稿格式.md` — 信息稿模板及参数
+- `references/meeting-minutes-from-audio.md` — 录音转会议记录完整流程（Whisper转写 → LLM整理 → Word生成）
+
 ## 常见问题
 
 ### 坑2：execute_code sandbox 不接受中文
