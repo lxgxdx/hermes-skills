@@ -92,36 +92,97 @@ When editing any skill or file that references GitHub tokens:
 
 ## Exclude Archived Skills with Secrets from Sync Scripts
 
-In any rsync-based sync script:
+In any rsync-based sync script, **exclude the entire `.archive/` directory** — never try to whitelist individual subdirectories. Hidden leading-dot directories are the failure mode:
+
 ```bash
+# SAFEST — exclude the whole archive directory
 rsync -av --delete "$SRC/" "$DST/" \
     --exclude '.git' \
-    --exclude '.archive/github-pat-retrieval/'   # has real PAT examples
+    --exclude '.archive/'
 ```
 
-**Critical rsync exclude path rule:** The `--exclude` pattern must match the **source-side relative path**, not the destination or some other path variant.
+**The trap (learned the hard way):** an exclude like `'.archive/github-pat-retrieval/'` *should* match the source-side relative path under `~/.hermes/skills/`, but in practice it can silently fail to match. Whether this is rsync's pattern engine treating leading-dot paths specially, or some other path-resolution quirk, the empirical result is: the file gets copied anyway, the commit lands with the real-looking token, and Push Protection blocks the push. Always dry-run first to confirm:
 
-Common mistake — this does NOT work:
 ```bash
-# WRONG — pattern doesn't match anything in the source tree
---exclude 'github/github-pat-retrieval'
+rsync -avn --delete "$SRC/" "$DST/" --exclude '.archive/' | grep -i archive
+# Expected: no output. If you see any ".archive/" path, the exclude failed.
 ```
 
-The correct pattern for `~/.hermes/skills/.archive/github-pat-retrieval/` is:
-```bash
---exclude '.archive/github-pat-retrieval/'
-```
-
-Always verify excludes work by running rsync in dry-run mode first:
-```bash
-rsync -avn --delete "$SRC/" "$DST/" --exclude '.archive/github-pat-retrieval/'
-```
+If you truly must exclude a single subdirectory instead of the whole `.archive/`, verify with dry-run; if it doesn't match, broaden the exclude to the parent.
 
 Also clean the remote URL before pushing to avoid embedding tokens in .git/config:
 ```bash
 git config remote.origin.url "https://github.com/owner/repo.git"
 git push
 ```
+
+## Cron / Recurring Sync Flow Pitfalls
+
+When the sync is run on a cron schedule (e.g. a daily skills-publish job, a config-mirror, a notes-backup push), three additional failure modes appear that don't show up in one-off manual pushes.
+
+### 1. Local `origin/main` is stale on every run
+
+A workdir that was cloned once and reused will have an `origin/main` ref that lags behind the actual remote. If something else (a manual push, a parallel cron job, a teammate's commit) has advanced the remote, the next `git push` will be rejected with `fetch first`.
+
+Always fetch + rebase (or pull --rebase) before push in a cron job:
+
+```bash
+cd "$WORKDIR"
+git fetch origin
+# Rebase local unpushed commits on top of the new remote HEAD
+git rebase origin/main || {
+    echo "rebase conflict — manual intervention required" >&2
+    exit 3
+}
+```
+
+If a duplicate commit (same subject line, different SHA) appears in the local history during rebase — common when the same cron job ran successfully once and then ran again before the local `origin/main` ref was updated — `git rebase --skip` is usually the right call. It discards the local duplicate and replays the rest on top of the remote's version.
+
+For non-interactive cron use, set `GIT_EDITOR=true` so the rebase doesn't hang waiting for a human to edit the commit message:
+
+```bash
+GIT_EDITOR=true git rebase --continue
+```
+
+### 2. `git commit || exit 0` hides later push failures
+
+A common cron pattern:
+
+```bash
+git add -A
+git commit -m "sync" || exit 0   # no-op if nothing to commit
+git push
+```
+
+This is fine until `git push` fails — the script exits 1, **but the commit has already been made locally**. The next run starts with a local HEAD one commit ahead of remote, which guarantees a non-fast-forward push (and re-triggers the same failure loop).
+
+Fix: detect the push failure and recover by fetching + rebasing + retrying:
+
+```bash
+git push || {
+    echo "push failed — fetching and rebasing for retry"
+    git fetch origin && git rebase origin/main && git push
+}
+```
+
+Alternatively, do the fetch + rebase *first*, every run, so the local is always reconcilable with the remote before any push attempt — see the full recipe in `references/cron-sync-to-github.md`.
+
+### 3. Pre-push secret grep as a cheap safety net
+
+Push Protection will reject pushes with secret-like patterns, but its error message is opaque (just "remote rejected" with a one-time unblock URL). Adding a pre-push grep against staged content gives clearer local diagnostics *and* surfaces rsync-exclude bugs that would otherwise leak through silently:
+
+```bash
+# After `git add -A`, before `git commit`
+if git diff --cached | grep -qE 'ghp_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}|gho_[A-Za-z0-9]{20,}|ghs_[A-Za-z0-9]{20,}|ghr_[A-Za-z0-9]{20,}|ghu_[A-Za-z0-9]{20,}|xox[abprs]-[A-Za-z0-9-]{10,}'; then
+    echo "ERROR: staged content contains a real-looking token. Aborting." >&2
+    echo "Inspect with: cd $WORKDIR && git diff --cached | grep -E 'ghp_|github_pat_'" >&2
+    exit 2
+fi
+```
+
+This catches the pattern at commit-time with a useful error, instead of letting it reach GitHub and getting "remote rejected" with a one-time unblock URL. It's also how you discover the leading-dot exclude bug above — if the grep fires, the rsync exclude didn't match what you thought it did.
+
+For the complete cron recipe (rsync → fetch → rebase → secret-grep → commit → push → verify) see `references/cron-sync-to-github.md`.
 
 ## GitHub Secret Scanning vs Push Protection
 

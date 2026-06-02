@@ -254,3 +254,10 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 - 消息数 <10 的 session：可能只是问候或简单问答，读 1 条 user + 1 条 asst 即可
 - 消息数 30-100：典型工作 session，读 user 第一条 + asst 头/中/尾各 1 条
 - 消息数 >100（典型如部务会整理、AI 知识库大任务）：必须分批，必要时只提取"完成的工作"和"文件路径"关键词
+
+**⚠️ Pitfall: 空/截断的 assistant 消息（interrupted session 检测）**:
+- **现象**：cron 在午夜 0:00 跑日志时，前一天最后一条 asst 消息可能为空或被截断。常见诱因：agent 反复遇到 CAPTCHA / 工具失败 / 搜索无结果后未生成最终总结（agent 进入死循环前被截断）
+- **检测**：扫 `/tmp/daily_log/sessions.json` 时留意某 session 最后一条 `[role]` 字段长度；空字符串或 <100 字符 + 倒数第 2 条 asst 提到"CAPTCHA"/"限流"/"再试一次"等失败模式 = 可疑截断
+- **应对**：读倒数第 2 条 asst 看 agent 卡在哪个阶段 → **必须在「未完成 / 待跟进」显式标注"任务疑似中断"** + 给出建议下一步（重试 / 改派 `delegate_task` 并行 / 换源 / 简化搜索条件）
+- **真实案例**：2026-06-02 飞书 18:55（`20260602_185500_a12728`，5 方向问题类新闻搜集）—— 最后一条 asst 消息为空，asst 20-21 显示 agent 卡在 360 CAPTCHA + 头条搜索不显示结果；如不显式标注，此会话会在日报里被静默遗漏
+- **为什么容易漏**：自动读取时只读 first + last asst 是 skill 推荐的省 context 策略，但"last 是空字符串"这种情况恰好和"last 不存在"边界情况一样会被跳过，需要在补丁里专门处理

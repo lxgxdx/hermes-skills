@@ -534,6 +534,12 @@ GitHub Push Protection scans **every push** for secret patterns — not just cod
 
 **Recovery when blocked:** If a commit is already blocked, a fresh clone is often needed to escape the stale index state. See the reference file for the step-by-step.
 
+### Recurring / Cron Sync Flow
+
+> See `references/cron-sync-to-github.md` for the full recipe (rsync → fetch → rebase → secret-grep → commit → push).
+
+If you're publishing a local directory to a GitHub mirror on a schedule (skills, configs, notes, backups), three extra failure modes appear that one-off pushes never hit: stale local `origin/main` causing `fetch first` rejections, `git commit || exit 0` hiding push failures, and silent rsync-exclude bugs leaking secret-pattern files into commits. The reference covers all three plus a ready-to-copy script.
+
 ---
 
 ## Useful PR Commands Reference

@@ -236,6 +236,14 @@ mkdir -p /tmp/gbrain-entities/<type>/<slug>
 - 正确做法：去掉内嵌引号改为 `title: 31条惠台措施`，或外套双引号、内嵌单引号
 - 详见 `references/gbrain-yaml-pitfalls-2026-05-31.md`
 
+**⚠️ 当 `import` 静默跳过文件时**：运行 `gbrain import <dir>` 输出 `Warning: skipped ... can not read a block mapping entry; a multiline key may not be an implicit key` → YAML 解析失败。**恢复步骤**：
+1. 用 `python3 -c "import yaml; yaml.safe_load(open('page.md').read().split('---', 2)[1])"` 定位错误行
+2. 修复 frontmatter（通常是嵌套引号、未闭合字符串、列表缩进错误）
+3. **不要重跑 `dream-cycle-wiki-bridge.sh`** — 它会重新 staging 所有文件再次失败
+4. 单独 staging 该文件：`mkdir -p /tmp/gbrain-fix/<slug>; cp <fixed>.md /tmp/gbrain-fix/<slug>/page.md; bun run ~/gbrain/src/cli.ts import /tmp/gbrain-fix`
+5. 验证：`gbrain list | grep <slug>` 应有该页面
+- 实战：2026-06-03 dream cycle 修复 `policy-26-measures`（`title: "26条"惠台措施` → `title: 26条惠台措施`）
+
 
 # 2. 批量导入（自动创建 chunks，绕过安全扫描）
 ~/.bun/bin/bun run ~/gbrain/src/cli.ts import /tmp/gbrain-entities
@@ -330,6 +338,17 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - embed --stale：0 chunks embedded（100% coverage — 正常）
 - Brain 状态：pages 82→83, chunks 156→158, embedded 156→158, entities 3→4
 - 详细记录：`references/dream-cycle-2026-06-02.md`
+
+### Dream Cycle 执行状态（2026-06-03）
+
+- 实体提取：7 个 cron session，4 个含实际内容；**全 cron 日，无人类对话**
+- Wiki→Brain 桥接：**10 个新政策实体**（llm-wiki-build 01:30 批量产出：26条惠台措施、商会改革、山东省统战细则、宗教教职人员、党外干部双重管理、新阶层统战、民族团结、港澳台社保、光彩事业、工商联章程）
+- **YAML 修复**：1 个文件 `policy-26-measures.md` 因 `title: "26条"惠台措施` 嵌套引号被 import 静默跳过 → 手动修 frontmatter + 单独 reimport 成功
+- 桥接脚本幂等性验证：修复后再次运行显示 14/14 "already in gbrain"
+- doctor：✅ health_score 85（同 2026-06-02）
+- embed --stale：0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 84→94, chunks 161→182, embedded 161→182, entity 4→14, tags 86→104
+- 详细记录：`references/dream-cycle-2026-06-03.md`
 
 ---
 

@@ -3,13 +3,13 @@
     "archived_at": null,
     "created_at": "2026-05-12T04:30:09.554552+00:00",
     "created_by": null,
-    "last_patched_at": "2026-06-01T16:11:11.213741+00:00",
-    "last_used_at": "2026-06-01T16:11:18.695920+00:00",
+    "last_patched_at": "2026-06-02T16:06:03.190635+00:00",
+    "last_used_at": "2026-06-02T16:00:47.559788+00:00",
     "last_viewed_at": "2026-06-01T16:11:18.687137+00:00",
-    "patch_count": 15,
+    "patch_count": 16,
     "pinned": false,
     "state": "active",
-    "use_count": 35,
+    "use_count": 36,
     "view_count": 14
   },
   "doc-file-conversion": {
@@ -64,14 +64,14 @@
   "gbrain-ops": {
     "archived_at": null,
     "created_at": "2026-05-02T18:05:35.099133+00:00",
-    "last_patched_at": "2026-06-01T18:08:31.258983+00:00",
-    "last_used_at": "2026-06-01T18:05:30.422379+00:00",
-    "last_viewed_at": "2026-06-01T18:05:30.412711+00:00",
-    "patch_count": 41,
+    "last_patched_at": "2026-06-02T18:03:59.721228+00:00",
+    "last_used_at": "2026-06-02T18:00:35.979599+00:00",
+    "last_viewed_at": "2026-06-02T18:00:35.957168+00:00",
+    "patch_count": 43,
     "pinned": false,
     "state": "active",
-    "use_count": 35,
-    "view_count": 31
+    "use_count": 36,
+    "view_count": 32
   },
   "github-pat-retrieval": {
     "archived_at": null,
@@ -141,13 +141,13 @@
     "created_at": "2026-05-12T04:29:21.854869+00:00",
     "created_by": null,
     "last_patched_at": "2026-05-12T04:30:32.893623+00:00",
-    "last_used_at": "2026-05-12T04:29:21.861250+00:00",
-    "last_viewed_at": "2026-05-12T04:29:21.854889+00:00",
+    "last_used_at": "2026-06-02T18:00:35.987636+00:00",
+    "last_viewed_at": "2026-06-02T18:00:35.971300+00:00",
     "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
   },
   "high-quality-skill-design": {
     "archived_at": null,
@@ -165,12 +165,12 @@
     "archived_at": null,
     "created_at": "2026-05-08T09:07:47.884214+00:00",
     "last_patched_at": "2026-05-09T18:07:06.678743+00:00",
-    "last_used_at": "2026-06-01T12:00:30.774091+00:00",
+    "last_used_at": "2026-06-02T12:00:04.915316+00:00",
     "last_viewed_at": "2026-05-30T15:16:32.314931+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 29,
+    "use_count": 30,
     "view_count": 5
   },
   "infinity-unraid-deploy": {
@@ -190,26 +190,26 @@
     "archived_at": null,
     "created_at": "2026-05-06T18:02:56.374398+00:00",
     "last_patched_at": "2026-06-01T09:00:35.689371+00:00",
-    "last_used_at": "2026-06-01T18:00:20.722262+00:00",
+    "last_used_at": "2026-06-02T18:00:28.039246+00:00",
     "last_viewed_at": "2026-06-01T08:58:58.829310+00:00",
     "patch_count": 13,
     "pinned": false,
     "state": "active",
-    "use_count": 32,
+    "use_count": 33,
     "view_count": 8
   },
   "meeting-minutes-generator": {
     "archived_at": null,
     "created_at": "2026-06-01T06:52:16.778598+00:00",
     "created_by": null,
-    "last_patched_at": "2026-06-01T07:39:23.036636+00:00",
-    "last_used_at": "2026-06-01T07:41:50.916915+00:00",
-    "last_viewed_at": "2026-06-01T07:41:50.908455+00:00",
-    "patch_count": 12,
+    "last_patched_at": "2026-06-02T01:03:07.646540+00:00",
+    "last_used_at": "2026-06-02T01:03:20.629656+00:00",
+    "last_viewed_at": "2026-06-02T01:03:20.619708+00:00",
+    "patch_count": 20,
     "pinned": false,
     "state": "active",
-    "use_count": 4,
-    "view_count": 4
+    "use_count": 10,
+    "view_count": 10
   },
   "novel-writing-agent": {
     "archived_at": null,
@@ -279,14 +279,14 @@
   "ppt-master": {
     "archived_at": null,
     "created_at": "2026-05-06T09:36:14.398517+00:00",
-    "last_patched_at": "2026-05-11T18:09:47.467003+00:00",
-    "last_used_at": "2026-05-30T15:16:32.415911+00:00",
-    "last_viewed_at": "2026-05-30T15:16:32.405632+00:00",
-    "patch_count": 2,
+    "last_patched_at": "2026-06-01T23:38:48.866940+00:00",
+    "last_used_at": "2026-06-01T23:36:34.871337+00:00",
+    "last_viewed_at": "2026-06-01T23:36:34.864290+00:00",
+    "patch_count": 3,
     "pinned": false,
     "state": "active",
-    "use_count": 7,
-    "view_count": 7
+    "use_count": 8,
+    "view_count": 8
   },
   "ppt-master-svg-workflow": {
     "archived_at": null,
@@ -299,6 +299,19 @@
     "state": "active",
     "use_count": 3,
     "view_count": 3
+  },
+  "ppt-master-upstream-sync": {
+    "archived_at": null,
+    "created_at": "2026-06-02T00:11:31.584889+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-02T00:12:03.384993+00:00",
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 1,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
   },
   "ppt-master-usage": {
     "archived_at": null,
@@ -339,14 +352,14 @@
   "tongzhan-info-workflow": {
     "archived_at": null,
     "created_at": "2026-05-03T17:04:25.564838+00:00",
-    "last_patched_at": "2026-06-01T18:16:44.046443+00:00",
-    "last_used_at": "2026-06-01T18:16:58.486428+00:00",
-    "last_viewed_at": "2026-06-01T18:16:58.475528+00:00",
-    "patch_count": 198,
+    "last_patched_at": "2026-06-02T18:14:56.577173+00:00",
+    "last_used_at": "2026-06-02T18:14:08.905960+00:00",
+    "last_viewed_at": "2026-06-02T18:14:08.891382+00:00",
+    "patch_count": 225,
     "pinned": false,
     "state": "active",
-    "use_count": 167,
-    "view_count": 167
+    "use_count": 183,
+    "view_count": 183
   },
   "tz-file-organizer": {
     "archived_at": null,
