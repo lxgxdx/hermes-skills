@@ -112,7 +112,8 @@ sources: []
 
 - 英文文档站超时：改用中文镜像站（适用于 Frigate 等主流项目）
 - Wiki 页面内容需要实际使用中持续补充，初始构建只建框架
-- **飞书 webhook 19001 错误**：调用飞书机器人 webhook 时，若返回 `invalid access token`（错误码 19001），说明 webhook 地址无效或已被禁用。此错误在 cron job 场景下难以提前发现，建议在任务末尾附带"如未收到通知请检查 webhook 配置"的兜底提示。
+- **飞书 webhook 19001 错误**：调用飞书机器人 webhook 时，若返回 `invalid access token`（错误码 19001），说明 webhook 地址无效或已被禁用。此错误在 cron job 场景下难以提前发现，建议在任务末尾附带"如未收到通知请检查 webhook 配置"的兜底提示。**正确格式**：`https://open.feishu.cn/open-apis/bot/v2/hook/<TOKEN>`，不能只传 raw token。
+- **pve.proxmox.com Wiki 部分页面为空**：GPU Passthrough 等页面的官方 Wiki 存在为空或需登录的情况，遇到此情况使用已有的 `raw/articles/` 原始文档或结合领域知识补充。
 
 ## 知识库分工（用户2026-04-19确立）
 
@@ -324,7 +325,7 @@ sources: [源文件或领域知识补充标注]
 - 统战知识库: `~/wiki/`（与 Frigate Wiki 共存，用 `concepts/`, `entities/` 子目录区分）
 - GBrain：对话记忆/碎片想法，与 LLM Wiki 分工明确
 
-**cron 环境网络限制速查**：`references/cron-network-limitations.md` — 收录可用/失效方案、gov.cn URL 规律、备用来源列表、安全扫描拦截解决方案。
+**cron 环境网络限制速查**：`references/cron-network-limitations.md` — 收录可用/失效方案、gov.cn URL 规律、备用来源列表、安全扫描拦截解决方案、飞书 webhook URL 格式、pve.proxmox.com Wiki 空页面处理。
 
 ## 多项目 Wiki 并行构建（2026-04-20 经验）
 

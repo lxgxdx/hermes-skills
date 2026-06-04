@@ -193,9 +193,11 @@ description: 统一战线信息稿工作流。触发词：搜索选题/信息稿
 - 观察者网 `https://www.guancha.cn/` → 备选，找宗教/民族相关报道
 - **Searxng curl 几乎全部返回无关内容**（本次实测打字网站/地图等），不推荐
 
-**台湾方向**：
-- **观察者网 `https://www.guancha.cn/taiwan/`** → 最可靠，首页台湾版近2天动态
-- 国台办 `https://www.gwytb.gov.cn/` → SSL证书可能过期，忽略警告继续访问
+**台湾方向（2026-06-04 实测更新）**：
+- **国台办例行发布会** → **优先尝试**。每月不定期（通常周中上午）举行，发言人朱凤莲答记者问，一次发布会即可产出2-3条高质量选题（经济命门+青年民心双线）。新闻稿在观察者网 politics 栏目发布（`guancha.cn/politics/`），台湾版首页引用标题。当台湾版首页标题列表不丰富时，直接搜索当天/前一天的国台办发布会新闻
+- **观察者网 `https://www.guancha.cn/taiwan/`** → 次选。新闻列表（`listitem [level=1]`）为当天新增新闻，观点列表（`listitem [level=2]`）为置顶多日观点文章。判断方法：阅读量和评论数双低（如5389阅读/1评论）的新闻更可能是当天新增
+- **国台办官网 `https://www.gwytb.gov.cn/`** → SSL证书可能过期，新闻发布会列表页可能404；发布会全文URL格式：`gwytb.gov.cn/xwdt/xwfb/xwfbh/年份月份/`
+- **观察者网politics栏目 `https://www.guancha.cn/politics/`** → 备选。台办发布会新闻URL在该栏目下，可作为台湾热点的补充来源
 - **Searxng curl 对台湾关键词全部失效**，直接用 browser_navigate
 
 **国际/对欧/对美方向（2026-06-03 新增稳定来源）**：
@@ -212,9 +214,11 @@ description: 统一战线信息稿工作流。触发词：搜索选题/信息稿
 >
 > **结论**：`browser_navigate` 是唯一可靠的搜索手段，Searxng 和直接 HTTP 请求在 cron 环境和当前环境均不可用。
 
-**台湾方向**：
-- **观察者网 `https://www.guancha.cn/taiwan/`** → 最可靠，首页台湾版近2天动态
-- 国台办 `https://www.gwytb.gov.cn/` → SSL证书可能过期，忽略警告继续访问
+**台湾方向（2026-06-04 实测更新）**：
+- **国台办例行发布会** → **优先尝试**。每月不定期（通常周中上午）举行，发言人朱凤莲答记者问，一次发布会即可产出2-3条高质量选题（经济命门+青年民心双线）。新闻稿在观察者网 politics 栏目发布（`guancha.cn/politics/`），台湾版首页引用标题。当台湾版首页标题列表不丰富时，直接搜索当天/前一天的国台办发布会新闻
+- **观察者网 `https://www.guancha.cn/taiwan/`** → 次选。新闻列表（`listitem [level=1]`）为当天新增新闻，观点列表（`listitem [level=2]`）为置顶多日观点文章。判断方法：阅读量和评论数双低（如5389阅读/1评论）的新闻更可能是当天新增
+- **国台办官网 `https://www.gwytb.gov.cn/`** → SSL证书可能过期，新闻发布会列表页可能404；发布会全文URL格式：`gwytb.gov.cn/xwdt/xwfb/xwfbh/年份月份/`
+- **观察者网politics栏目 `https://www.guancha.cn/politics/`** → 备选。台办发布会新闻URL在该栏目下，可作为台湾热点的补充来源
 - **Searxng curl 对台湾关键词全部失效**，直接用 browser_navigate
 
 **具体操作**：
@@ -518,10 +522,42 @@ result = subprocess.run(
 print(result.stdout)
 ```
 
-**第二层：python-docx 直接读取内容**
+**第二层：python-docx 直接读取内容**（docx 结构完好时首选）
+
 - 定位到具体文件后，用 python-docx 直接读取段落文本进行内容分析
-- 关键文件清单（优先读）：
-  - `6.巡查部机关/3.材料/4.工作总结及要点/2025/2025年全县统战工作情况.docx` — 年度全局工作
+
+**🆕 M3 兜底：** 如果文件是扫描件/图片型 PDF（pdftotext 输出为空），用 vision_analyze：
+```python
+import subprocess
+from hermes_tools import vision_analyze
+
+def read_doc_or_image(fpath):
+    \"\"\"优先 python-docx，兜底 vision_analyze（M3 多模态）\"\"\"
+    if fpath.endswith('.docx'):
+        from docx import Document
+        try:
+            doc = Document(fpath)
+            return '\\n'.join(p.text for p in doc.paragraphs if p.text.strip())
+        except:
+            pass
+    # OCR/扫描件兜底
+    img_prefix = '/tmp/_vision_ingest'
+    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf',
+                    '--outdir', '/tmp', fpath], timeout=30, capture_output=True)
+    # 找到生成的 PDF
+    import os
+    base = os.path.splitext(os.path.basename(fpath))[0]
+    pdf_path = os.path.join('/tmp', base + '.pdf')
+    if os.path.exists(pdf_path):
+        subprocess.run(['pdftoppm', '-f', '1', '-l', '1', '-png',
+                        '-r', '200', pdf_path, img_prefix], timeout=30)
+        result = vision_analyze(image_url=f'{img_prefix}-1.png',
+                                question="完整提取所有文字内容，按段落输出。")
+        return result
+    return None
+```
+
+- 关键文件路径速查：
   - `6.巡查部机关/7.上报材料/4.工作总结及要点/2024/县委统战部2024年度工作总结.docx` — 去年工作亮点
   - `8.信息工作/范文/2026年/4月/` — 最新范文（已发布的经验类信息稿）
   - `1.办公室/34.奋进十五五民企宣传/` — 民营企业特色做法
@@ -1261,6 +1297,7 @@ with urllib.request.urlopen(req) as resp:
 | **飞书消息发送坑** | `references/feishu-messaging-pitfalls.md` — open_id vs chat_id、cron环境webhook失效、lxgxdx ID速查 |
 | **Cron Raw IP 安全扫描拦截（2026-05-24）** | `references/cron-raw-ip-security-block-2026-05-24.md` — tirith安全扫描器拦截HTTP Raw IP请求，browser_navigate兜底方案 |
 || **自查汇报第七大板块新增方向（2026-05-26）** | `references/自查汇报第七板块新增方向.md` — 自查汇报七大板块中唯一未写信息稿的方向（管党治党主体责任），含三大子问题及排重状态 |
+| **06/05 经验类 cron 实战洞察** | `references/2026-06-05-experiences-cron-insights.md`（06/05 经验类 cron 执行：自查汇报原话引用 = 最强可写性证据 + 维度互补 vs 换角度 vs 全新 三分类判断法 + 排重规则第3节100%耗尽确认 + 6月新维度词库扩充（挂账销号/三色管理/红脸出汗/挂职实战/四早预警等10个）+ 自查汇报29条问题可挖4-5个全新方向 + 经验类产出文件命名规范 + execute_code 永远 BLOCKED 硬规则 + 自查汇报剩余可挖方向预判 10 条） |
 
 
 > 以下是 cron 凌晨跑每日选题的实战经验，直接照抄任务描述的 Python 代码会导致问题。

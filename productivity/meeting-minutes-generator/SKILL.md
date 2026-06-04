@@ -35,15 +35,47 @@ category: productivity
 
 ## 文件识别与读取
 
-**议题表**（.doc/.docx 二进制格式，不能直接 python-docx 读取）：
+**🆕 M3 多模态优先（2026-06 确立）：** 当前模型有原生视觉能力。处理扫描件/图片型文档时优先 vision_analyze，libreoffice 转 txt 只作为兜底。
+
+```python
+# 扫描件/图片型文档 — M3 优先（不要走 OCR）
+from hermes_tools import vision_analyze
+import subprocess, os
+
+# 把 docx 首页转图片（M3 不能直接读 PDF/docx，需转图）
+def docx_to_image(docx_path, page=1):
+    """把 docx 的第1页转成 PNG 图片"""
+    import subprocess
+    pdf_path = '/tmp/_tmp.pdf'
+    subprocess.run(['libreoffice', '--headless', '--convert-to', 'pdf',
+                    '--outdir', '/tmp', docx_path],
+                   timeout=30, capture_output=True)
+    base = os.path.splitext(os.path.basename(docx_path))[0]
+    found_pdf = os.path.join('/tmp', base + '.pdf')
+    if os.path.exists(found_pdf):
+        img_prefix = '/tmp/doc_page'
+        subprocess.run(['pdftoppm', '-f', str(page), '-l', str(page),
+                        '-png', '-r', '200', found_pdf, img_prefix],
+                       timeout=30)
+        return f'{img_prefix}-{page:03d}.png'
+    return None
+
+# 使用方式
+img = docx_to_image('文字记录：REC0091.docx')
+if img:
+    vision_analyze(image_url=img,
+                   question="这份文字稿里有哪些发言人和议题？提取说话人姓名和发言内容。")
+```
+
+**议题表：**
 ```bash
 libreoffice --headless --convert-to txt:"Text" "会议议题.doc" --outdir /tmp/
 cat /tmp/会议议题.txt
 ```
 
-**文字稿**（.docx 格式）：
+**文字稿：**
 ```bash
-# 方式1：python-docx 直接读
+# 方式1：python-docx 直接读（首选，保留段落结构）
 python3 -c "
 from docx import Document
 doc = Document('文字记录：REC0091 2026年6月1日.docx')
@@ -55,7 +87,7 @@ for p in doc.paragraphs:
 libreoffice --headless --convert-to txt:"Text" "文字记录：REC0091 2026年6月1日.docx" --outdir /tmp/
 ```
 
-**模板文件**（会议记录（模板）.docx）：
+**模板文件：**
 ```bash
 libreoffice --headless --convert-to txt:"Text" "会议记录（模板）.docx" --outdir /tmp/
 ```

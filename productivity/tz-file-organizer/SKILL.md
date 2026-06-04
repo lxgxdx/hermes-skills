@@ -37,6 +37,7 @@ description: 统战重要会议材料整理。从备份文件夹（补充材料�
 ## 依赖声明
 
 **必需命令：** `find`, `strings`, `pdftotext`, `tesseract`
+**🆕 M3 可选：** `vision_analyze`（当前模型有原生多模态视觉，处理扫描件/图片时优先使用）
 **必需Python库：** `openpyxl`, `zipfile`（内置）, `re`（内置）, `subprocess`（内置）
 **运行方式：** 在 venv 中执行（`source venv/bin/activate`）
 
@@ -120,12 +121,17 @@ dates = re.findall(r'（(\d{4}年\d{1,2}月\d{1,2}日））', text)
 
 **从 PDF 读日期：**
 ```bash
+# M3 优先：vision_analyze 可读 PDF 转图
+pdftoppm -f 1 -l 1 -png -r 200 "/path/to/file.pdf" /tmp/pd
+# 然后 vision_analyze(image_url="/tmp/pd-1.png", question="提取所有日期")
 pdftotext -layout "/path/to/file.pdf" - 2>/dev/null | grep -E "月|日|202"
 strings "/path/to/file.pdf" 2>/dev/null | grep -E "D:202" | head -3
 ```
 
 **OCR 图片（微信截图）：**
 ```bash
+# M3 优先：直接 vision_analyze(image_url="/path/to/img", question="提取所有文字和日期")
+# 退而求其次：
 tesseract /path/to/image.jpg stdout -l chi_sim 2>/dev/null | head -20
 ```
 
@@ -318,9 +324,10 @@ done
 |------|---------|
 | `.doc` 读不出 | 改用 `strings` 命令 |
 | strings 超时 | 加 `timeout=5` 参数 |
-| PDF 无文字 | 用 `pdftotext` 或读 `D:` 元数据 |
-| 微信截图 | 用 `tesseract -l chi_sim` OCR |
+| PDF 无文字 | **🆕 M3**: vision_analyze 优先（pdftoppm 转图后）→ pdftotext → 读 D: 元数据 |
+| 微信截图 | **🆕 M3**: vision_analyze 优先 → tesseract 兜底 |
 | 同日多会 | 用文件夹名（列E）去重，不用日期 |
-| 日期模糊（"1月上旬"） | 从其他文件交叉确认，找到具体日期才能归档 |
+| 日期模糊（"1月上旬"）| 从其他文件交叉确认，找到具体日期才能归档 |
 | Excel 序号乱 | 重新遍历+排序后重建 |
 | 目标路径选错 | 先 `ls /mnt/nfs/.../6.备份/` 确认 |
+| 改名后的文件被移入子目录 | 如 `单位自查报告/` 等归档目录，文件命名已合规则不再二次操作 |

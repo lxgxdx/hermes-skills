@@ -1,7 +1,7 @@
 ---
 name: github-pr-workflow
 description: "GitHub PR lifecycle: branch, commit, open, CI, merge."
-version: 1.1.0
+version: 1.3.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
@@ -526,11 +526,17 @@ GitHub Push Protection scans **every push** for secret patterns — not just cod
 - Variable names or comments mentioning the pattern
 
 **Safe token placeholders:**
+
+> ⚠️ The "GOOD" forms below avoid matching common pre-push secret greps (the 20-char-minimum regex catches the old `ghp_xx...xxxx` example). Use the *spread-out* form when documenting token shapes so the chars after `ghp_` are <20.
+
 ```
 # GOOD: TOKEN_NAME_HERE
 # GOOD: YOUR_TOKEN_HERE
-# GOOD: ghp_xx...xxxx  (clearly fake — not a real prefix)
+# GOOD: ghp_xx . . . xxxx   (spaces between dots break the char-run) — see note
+# GOOD: ghp_<your_token>    (angle-bracket placeholder, not a real prefix)
 ```
+
+**Note on `ghp_xx...xxxx`:** this *is* a real-looking shape to a regex like `ghp_[A-Za-z0-9]{20,}` — the dots are literal and the run is >20 chars. The format is fine for *human* readers (it obviously isn't a real token) but a pre-push grep will fire on it. If your project has a pre-push secret guard, see the `cron-sync-to-github.md` reference for the `sed 's/\.\.\.//g'` workaround, or use `ghp_<your_token>` instead.
 
 **Recovery when blocked:** If a commit is already blocked, a fresh clone is often needed to escape the stale index state. See the reference file for the step-by-step.
 
@@ -538,7 +544,7 @@ GitHub Push Protection scans **every push** for secret patterns — not just cod
 
 > See `references/cron-sync-to-github.md` for the full recipe (rsync → fetch → rebase → secret-grep → commit → push).
 
-If you're publishing a local directory to a GitHub mirror on a schedule (skills, configs, notes, backups), three extra failure modes appear that one-off pushes never hit: stale local `origin/main` causing `fetch first` rejections, `git commit || exit 0` hiding push failures, and silent rsync-exclude bugs leaking secret-pattern files into commits. The reference covers all three plus a ready-to-copy script.
+If you're publishing a local directory to a GitHub mirror on a schedule (skills, configs, notes, backups), three extra failure modes appear that one-off pushes never hit: stale local `origin/main` causing `fetch first` rejections, `git commit || exit 0` hiding push failures, and silent rsync-exclude bugs leaking secret-pattern files into commits. The reference covers all three plus a ready-to-copy script. **Three more failure modes are now documented in that reference, all discovered from real cron runs (2026-06-03 and 2026-06-04):** the pre-push regex firing on its own redacted example placeholders (e.g. `ghp_Fc...ZhBU`) and aborting an otherwise clean sync; `rsync --exclude '.archive/'` leaving stale files in the workdir that `git add -A` then re-stages; and `git rm --cached -r .archive/` accidentally staging mass-deletions of every other archived skill. The reference also has an authoring rule: never show unredacted `ghp_<prefix>...<suffix>` examples in SKILL.md files — the `...` is a Hermes redaction marker, real PATs have no such marker, and pasting a real one will silently re-leak on every sync.
 
 ---
 

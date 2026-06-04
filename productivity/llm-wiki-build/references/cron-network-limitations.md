@@ -62,7 +62,7 @@ https://www.gov.cn/zhengce/content/YYYYMM/content_XXXXXXX.htm
 
 **错误信息**：
 ```
-[PASS] Security scan — [HIGH] Pipe to interpreter: head | python3: 
+[PASS] Security scan — [HIGH] Pipe to interpreter: head | python3:
 Command pipes output from 'head' directly to interpreter 'python3'.
 Downloaded content will be executed without inspection.
 ```
@@ -80,6 +80,37 @@ terminal("curl -s https://xxx | head -200 | python3 -c '...'")
 write_file("/tmp/fetch.py", "import urllib.request\n...")
 terminal("python3 /tmp/fetch.py")
 ```
+
+## 飞书 Webhook URL 格式（2026-06-05 实测）
+
+**问题**：直接使用 raw token（如 `oc_7c656031826c26b15f17d010097f3619`）调用飞书 webhook，返回错误码 19001（`param invalid: incoming webhook access token invalid`）。
+
+**原因**：飞书机器人 webhook 需要完整的 HTTPS URL，不能只传 token。
+
+**正确格式**：
+```
+https://open.feishu.cn/open-apis/bot/v2/hook/<TOKEN>
+```
+
+**示例**：
+```bash
+# ❌ 错误（19001）
+curl -X POST "oc_7c656031826c26b15f17d010097f3619" -H "Content-Type: application/json" -d '{"msg_type":"text","content":{"text":"test"}}'
+
+# ✅ 正确
+curl -X POST "https://open.feishu.cn/open-apis/bot/v2/hook/oc_7c656031826c26b15f17d010097f3619" -H "Content-Type: application/json" -d '{"msg_type":"text","content":{"text":"test"}}'
+```
+
+**execute_code 限制**：在 cron 环境中，`execute_code` 的 `urllib.request.urlopen()` 无法进行 DNS 解析（`Name or service not known`）。应使用 `terminal` + `curl` 组合。
+
+## pve.proxmox.com Wiki 页面为空（2026-06-05 实测）
+
+**现象**：访问 `https://pve.proxmox.com/wiki/GPU_Passthrough` 返回"This page is empty / you do not have permission"。
+
+**处理**：PVE 官方 Wiki 部分页面内容为空或需要登录才能编辑。对于 GPU Passthrough 等主题，当官方 Wiki 页面为空时：
+1. 使用已有的 `raw/articles/pci-passthrough.md`（之前抓取的完整内容）
+2. 或参考 PVE 官方文档其他相关章节（如 Installation 章节中的 PCIe 相关段落）
+3. 结合领域知识补充
 
 ## browser_navigate 跳转问题
 

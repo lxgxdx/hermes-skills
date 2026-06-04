@@ -141,7 +141,7 @@ for f, mlist in results.items():
 | 光彩-基金暗箱化 | guangcai | 缺支撑 |
 | 商会-党组织联而不紧 | shanghui-gaige | 缺真实新闻 |
 
-### 已写过（10 个，仅做记录）
+### 已写过（13 个，仅做记录）
 
 | 选题 | 政策 | 写过时间 |
 |------|------|---------|
@@ -155,6 +155,9 @@ for f, mlist in results.items():
 | 民族团结创建展板代替实效 | minzu-tuanjie | 6/3 选题库（cron） |
 | 党外干部配而不用 | party-outside-cadres | 6/3 选题库（cron） |
 | 基层宗教三级网络有名无实 | tongzhan-work-regulation + shandong-tongzhan | 6/3 选题库（cron） |
+| 民族因素认定扩大化 | minzu-tuanjie | 6/4 选题库（cron） |
+| 新阶层基地建而不用 | new-social-stratum + tongzhan-work-regulation | 6/4 选题库（cron） |
+| 同等待遇判定标准缺失 | 26-measures | 6/4 选题库（cron） |
 
 ---
 

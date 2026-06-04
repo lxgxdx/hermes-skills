@@ -3,14 +3,14 @@
     "archived_at": null,
     "created_at": "2026-05-12T04:30:09.554552+00:00",
     "created_by": null,
-    "last_patched_at": "2026-06-02T16:06:03.190635+00:00",
-    "last_used_at": "2026-06-02T16:00:47.559788+00:00",
-    "last_viewed_at": "2026-06-01T16:11:18.687137+00:00",
-    "patch_count": 16,
+    "last_patched_at": "2026-06-04T16:07:46.574159+00:00",
+    "last_used_at": "2026-06-04T16:05:39.037645+00:00",
+    "last_viewed_at": "2026-06-04T16:05:39.031003+00:00",
+    "patch_count": 22,
     "pinned": false,
     "state": "active",
-    "use_count": 36,
-    "view_count": 14
+    "use_count": 40,
+    "view_count": 16
   },
   "doc-file-conversion": {
     "archived_at": null,
@@ -48,30 +48,43 @@
     "use_count": 2,
     "view_count": 2
   },
+  "excel-taijiang": {
+    "archived_at": null,
+    "created_at": "2026-06-04T06:47:11.600695+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-04T06:47:11.609155+00:00",
+    "last_viewed_at": "2026-06-04T06:47:11.600714+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "gbrain-cli-usage": {
     "archived_at": null,
     "created_at": "2026-05-16T18:00:53.331355+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-05-27T18:00:24.240480+00:00",
-    "last_viewed_at": "2026-05-27T18:00:24.224669+00:00",
+    "last_used_at": "2026-06-04T18:00:48.334439+00:00",
+    "last_viewed_at": "2026-06-04T18:00:48.310863+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 2,
-    "view_count": 2
+    "use_count": 4,
+    "view_count": 4
   },
   "gbrain-ops": {
     "archived_at": null,
     "created_at": "2026-05-02T18:05:35.099133+00:00",
-    "last_patched_at": "2026-06-02T18:03:59.721228+00:00",
-    "last_used_at": "2026-06-02T18:00:35.979599+00:00",
-    "last_viewed_at": "2026-06-02T18:00:35.957168+00:00",
-    "patch_count": 43,
+    "last_patched_at": "2026-06-03T18:04:53.839543+00:00",
+    "last_used_at": "2026-06-04T18:00:48.345190+00:00",
+    "last_viewed_at": "2026-06-04T18:00:48.324717+00:00",
+    "patch_count": 47,
     "pinned": false,
     "state": "active",
-    "use_count": 36,
-    "view_count": 32
+    "use_count": 39,
+    "view_count": 35
   },
   "github-pat-retrieval": {
     "archived_at": null,
@@ -165,12 +178,12 @@
     "archived_at": null,
     "created_at": "2026-05-08T09:07:47.884214+00:00",
     "last_patched_at": "2026-05-09T18:07:06.678743+00:00",
-    "last_used_at": "2026-06-02T12:00:04.915316+00:00",
+    "last_used_at": "2026-06-04T12:00:09.057202+00:00",
     "last_viewed_at": "2026-05-30T15:16:32.314931+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 30,
+    "use_count": 32,
     "view_count": 5
   },
   "infinity-unraid-deploy": {
@@ -189,14 +202,14 @@
   "llm-wiki-build": {
     "archived_at": null,
     "created_at": "2026-05-06T18:02:56.374398+00:00",
-    "last_patched_at": "2026-06-01T09:00:35.689371+00:00",
-    "last_used_at": "2026-06-02T18:00:28.039246+00:00",
-    "last_viewed_at": "2026-06-01T08:58:58.829310+00:00",
-    "patch_count": 13,
+    "last_patched_at": "2026-06-04T18:04:54.842123+00:00",
+    "last_used_at": "2026-06-04T18:04:21.089695+00:00",
+    "last_viewed_at": "2026-06-04T18:04:21.083311+00:00",
+    "patch_count": 16,
     "pinned": false,
     "state": "active",
-    "use_count": 33,
-    "view_count": 8
+    "use_count": 38,
+    "view_count": 11
   },
   "meeting-minutes-generator": {
     "archived_at": null,
@@ -263,18 +276,31 @@
     "use_count": 0,
     "view_count": 0
   },
-  "pdf-ocr": {
+  "pdf-image-ocr-scan": {
     "archived_at": null,
-    "created_at": "2026-06-01T15:08:21.726105+00:00",
+    "created_at": "2026-06-04T07:15:48.968735+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-01T15:08:21.733724+00:00",
-    "last_viewed_at": "2026-06-01T15:08:21.726120+00:00",
+    "last_used_at": "2026-06-04T07:15:48.977644+00:00",
+    "last_viewed_at": "2026-06-04T07:15:48.968761+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
     "use_count": 1,
     "view_count": 1
+  },
+  "pdf-ocr": {
+    "archived_at": null,
+    "created_at": "2026-06-01T15:08:21.726105+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-04T07:15:41.810792+00:00",
+    "last_viewed_at": "2026-06-04T07:15:41.802819+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 2,
+    "view_count": 2
   },
   "ppt-master": {
     "archived_at": null,
@@ -337,6 +363,19 @@
     "use_count": 5,
     "view_count": 5
   },
+  "productivity/gbrain-ops": {
+    "archived_at": null,
+    "created_at": "2026-06-03T18:03:44.484473+00:00",
+    "created_by": null,
+    "last_patched_at": null,
+    "last_used_at": "2026-06-03T18:03:44.491212+00:00",
+    "last_viewed_at": "2026-06-03T18:03:44.484495+00:00",
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 1,
+    "view_count": 1
+  },
   "productivity/tongzhan-info-workflow": {
     "archived_at": null,
     "created_at": "2026-05-08T03:34:10.112257+00:00",
@@ -349,30 +388,69 @@
     "use_count": 3,
     "view_count": 3
   },
+  "tongzhan-file-batch-rename": {
+    "archived_at": null,
+    "created_at": "2026-06-04T06:48:33.963444+00:00",
+    "created_by": "agent",
+    "last_patched_at": null,
+    "last_used_at": null,
+    "last_viewed_at": null,
+    "patch_count": 0,
+    "pinned": false,
+    "state": "active",
+    "use_count": 0,
+    "view_count": 0
+  },
   "tongzhan-info-workflow": {
     "archived_at": null,
     "created_at": "2026-05-03T17:04:25.564838+00:00",
-    "last_patched_at": "2026-06-02T18:14:56.577173+00:00",
-    "last_used_at": "2026-06-02T18:14:08.905960+00:00",
-    "last_viewed_at": "2026-06-02T18:14:08.891382+00:00",
-    "patch_count": 225,
+    "last_patched_at": "2026-06-04T18:13:16.976562+00:00",
+    "last_used_at": "2026-06-04T18:12:53.738434+00:00",
+    "last_viewed_at": "2026-06-04T18:12:53.727665+00:00",
+    "patch_count": 233,
     "pinned": false,
     "state": "active",
-    "use_count": 183,
-    "view_count": 183
+    "use_count": 198,
+    "view_count": 198
+  },
+  "tongzhan-wiki-policy-builder": {
+    "archived_at": null,
+    "created_at": "2026-06-03T17:41:06.603323+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-04T17:44:53.351505+00:00",
+    "last_used_at": "2026-06-04T17:42:03.958887+00:00",
+    "last_viewed_at": "2026-06-04T17:42:03.950737+00:00",
+    "patch_count": 10,
+    "pinned": false,
+    "state": "active",
+    "use_count": 2,
+    "view_count": 2
   },
   "tz-file-organizer": {
     "archived_at": null,
     "created_at": "2026-05-11T18:07:41.484543+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-05-11T18:07:41.491417+00:00",
-    "last_viewed_at": "2026-05-11T18:07:41.484556+00:00",
+    "last_used_at": "2026-06-04T06:47:11.605072+00:00",
+    "last_viewed_at": "2026-06-04T06:47:11.594416+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 1,
-    "view_count": 1
+    "use_count": 2,
+    "view_count": 2
+  },
+  "user-profile-curation": {
+    "archived_at": null,
+    "created_at": "2026-06-03T18:07:16.262044+00:00",
+    "created_by": "agent",
+    "last_patched_at": "2026-06-04T18:10:01.912168+00:00",
+    "last_used_at": "2026-06-04T18:01:10.158909+00:00",
+    "last_viewed_at": "2026-06-04T18:01:10.140905+00:00",
+    "patch_count": 6,
+    "pinned": false,
+    "state": "active",
+    "use_count": 2,
+    "view_count": 2
   },
   "wechat-mp-format": {
     "archived_at": null,

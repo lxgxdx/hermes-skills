@@ -70,6 +70,23 @@ ssh root@<unraid-ip> "nvidia-smi --query-gpu=memory.free,memory.total --format=c
 
 ---
 
+## 🆕 M3 多模态时代的 OCR 策略（2026-06 更新）
+
+当前对话模型有原生多模态视觉，对**少量文档/图片**可直接用 `vision_analyze`，无需 OCR 服务：
+
+| 场景 | 做法 | 说明 |
+|------|------|------|
+| 单张图片/截图 | `vision_analyze` | 99%+ 准确，无需部署 OCR |
+| 1-5 页扫描件 | pdftoppm 转图 → vision_analyze | 比 EasyOCR 更准 |
+| 大批量文档（50+ 页） | **EasyOCR 好** | vision 一个一个传太慢 |
+| 自动化脚本（无交互） | **EasyOCR 好** | 纯 API，不需要 LLM 上下文 |
+| 需要 bbox 坐标 | **EasyOCR 好** | vision 不返回坐标 |
+| M2.7 或审核拦截 | **EasyOCR 好** | 退而求其次 |
+
+**结论：OCR 服务（EasyOCR on P4）仍然是基础设施必备，但日常小文档处理优先走 vision。**
+
+---
+
 ## Deployment: Unraid Tesla P4
 
 > See `unraid-p4-ocr-deploy` skill for the complete deployment guide (Unraid Docker UI, CA template,镜像选择, docker-compose.yml). See `easyocr-unraid-p4-deploy` skill for a fully实测 (2026-04-22) Dockerfile + api.py with exception handling, numpy<2 fix, and PyMuPDF PDF support. Key facts:

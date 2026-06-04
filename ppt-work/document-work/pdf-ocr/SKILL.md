@@ -5,6 +5,27 @@ description: PDF扫描件转Word文档。支持中文OCR识别，自动裁掉页
 
 # PDF扫描件 OCR 转换技能 📄
 
+## 🆕 M3 多模态优先提示
+
+当前模型（MiniMax-M3）有原生多模态视觉。对**少量页数（1-10 页）** 的扫描件 PDF，优先用 vision_analyze，比百度 OCR 更快更准（省百度 OCR 免费额度）：
+
+```python
+# 少量页：M3 vision_analyze 优先
+import subprocess
+from hermes_tools import vision_analyze
+
+for page in range(1, 4):  # 前 3 页
+    subprocess.run(['pdftoppm', '-f', str(page), '-l', str(page),
+                    '-png', '-r', '200', 'input.pdf', f'/tmp/v_page'])
+    vision_analyze(image_url=f'/tmp/v_page-{page:03d}.png',
+                   question=f"提取第 {page} 页所有文字，按段落输出。")
+```
+
+**什么时候用百度 OCR（本 skill 的原始流程）：**
+- **大批量文档** (>30页) — vision 一个一个传效率低
+- **需要结构化 word 输出**（页眉页脚裁剪、插图保留）
+- **M3 多模态不可用**（如 M2.7 对话，或扫描件内容被安全审核拦截）
+
 ## 配置
 - **百度 OCR API Key**: vOBOM7tO0lL8cKMJdZy453Ai
 - **百度 OCR Secret Key**: bib8MvDPTfXXdPz4JyzIyDCvCeKxtpyu

@@ -127,6 +127,35 @@ print('Total sessions:', len(out), 'Total messages:', sum(len(s['messages']) for
 # 之后用 search_files / read_file 按需读取（不要一次性 cat 全部）
 ```
 
+**打印 session 摘要时附 asst 状态**（cron 必备，元数据一眼看出哪些 session 是"截断 vs 完整"）：
+```bash
+python3 -c "
+import sqlite3, json
+from datetime import date, datetime, timedelta
+y = date.today() - timedelta(days=1)
+ys = datetime(y.year, y.month, y.day, 0, 0, 0).timestamp()
+ye = datetime(y.year, y.month, y.day, 23, 59, 59).timestamp()
+c = sqlite3.connect('/home/lxgxdx/.hermes/state.db')
+sessions = c.execute('SELECT id, source, started_at, message_count, title FROM sessions WHERE started_at >= ? AND started_at <= ? ORDER BY started_at', (ys, ye)).fetchall()
+out = []
+for sid, source, ts, mc, title in sessions:
+    msgs = c.execute('SELECT id, role, content FROM messages WHERE session_id = ? AND role IN (\"user\", \"assistant\") ORDER BY id', (sid,)).fetchall()
+    out.append({'id': sid, 'source': source, 'ts': ts, 'mc': mc, 'title': title, 'msgs': [(mid, r, (content or '')) for mid, r, content in msgs]})
+import os
+os.makedirs('/tmp/daily_log', exist_ok=True)
+with open('/tmp/daily_log/sessions.json', 'w') as f:
+    json.dump(out, f, ensure_ascii=False, indent=2)
+# 摘要：标注每 session 首/末 asst 长度，用于快速识别截断
+for s in out:
+    asst = [m for m in s['msgs'] if m[1] == 'assistant']
+    first_len = len(asst[0][2]) if asst else 0
+    last_len = len(asst[-1][2]) if asst else 0
+    flag = ' ⚠️EMPTY_LAST' if asst and last_len < 100 else ''
+    print(f\"  {s['id'][:50]} | {s['source']} | {s['mc']} msgs | asst[0]={first_len} asst[-1]={last_len}{flag}\")
+print('Total sessions:', len(out), 'Total messages:', sum(len(s['msgs']) for s in out))
+"
+```
+
 **关键设计**：
 - 把 600+ 条消息先 dump 到 `/tmp/daily_log/sessions.json`
 - 摘要级别的元数据（session id/source/title/时间/消息数）一次性打印
@@ -212,6 +241,7 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 ## 参考资料
 
 - `references/cron-runbook.md` — **逐行可复用的 cron 模式命令序列**（从查询 → 落库 → 验证完整流程），含所有已知陷阱的速查表
+- `references/cron-recurring-bugs.md` — **跨日复现的 cron 任务已知 bug & 信号清单**（飞书 webhook 失效 / backup.log 缺失 / GitHub PAT 拦截 / dream cycle 累计 bug），必须显式标注在「未完成 / 待跟进」
 
 ---
 
@@ -247,8 +277,13 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 **读取优先级（高→低）**：
 1. **feishu / weixin / telegram / cli 的 user 消息**（用户实际需求）
 2. **feishu / weixin / telegram / cli 的最后 1-2 条 assistant 消息**（结果汇报）
-3. **cron 任务的第一条 assistant 消息**（成果摘要）
+3. **cron 任务的最后一条 assistant 消息**（成果汇报，通常是日报 / 总结 / `## 任务完成报告` / `# 🧠 Dream Cycle ... 完成报告` 这类结构化结论）
 4. **cron 任务的中间过程**（只在需要追细节时读）
+
+**⚠️ Pitfall: cron session 的第一条 assistant 消息常常是空字符串**（2026-06-03 实测，11 个 cron session 全部 `asst[0] = ''`）。原因：cron prompt 注入式 user 消息长达数百到 11k 字符，agent 第一反应是 "I'll start by..." 之类 100 字符内的过渡回复，然后才进入正式工作流。所以**读取 cron session 时必须跳过第一条 asst，直接读最后一条**，不要相信 "读第一条 asst 就是成果摘要" 的旧假设。
+
+**⚠️ Pitfall: 跨 session 叙事一致性 — 不要相信前序 cron session 的"汇总数"**。真实案例 2026-06-03：dream cycle session（02:00）汇报 "Wiki 14 个新 policy-*.md 页面"，但 01:30 的 llm-wiki-build session 实际只新建了 1 个 P07。原因是 dream cycle 读了 `~/wiki/log.md` 累计历史行（混合了过去多天的增量），把"近期 wiki 增长"等同于"今天 wiki 增长"。  
+**应对**：每个 session 的产出以**该 session 自己 first user + last asst 提到的文件路径/动作**为权威，前序 session 的"汇总"只在显式标注 "Today built N" 时才采信。日报里若发现两个 session 提到的产出数量冲突，必须在「未完成 / 待跟进」标注并指明哪个 session 需复核。
 
 **判断 session 是否值得深读**：
 - 消息数 <10 的 session：可能只是问候或简单问答，读 1 条 user + 1 条 asst 即可
@@ -261,3 +296,53 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 - **应对**：读倒数第 2 条 asst 看 agent 卡在哪个阶段 → **必须在「未完成 / 待跟进」显式标注"任务疑似中断"** + 给出建议下一步（重试 / 改派 `delegate_task` 并行 / 换源 / 简化搜索条件）
 - **真实案例**：2026-06-02 飞书 18:55（`20260602_185500_a12728`，5 方向问题类新闻搜集）—— 最后一条 asst 消息为空，asst 20-21 显示 agent 卡在 360 CAPTCHA + 头条搜索不显示结果；如不显式标注，此会话会在日报里被静默遗漏
 - **为什么容易漏**：自动读取时只读 first + last asst 是 skill 推荐的省 context 策略，但"last 是空字符串"这种情况恰好和"last 不存在"边界情况一样会被跳过，需要在补丁里专门处理
+
+**⚠️ "全 cron 日"处理（0 飞书/微信/TG/cli）**（2026-06-03 实测）：
+
+偶尔会出现整天都没有人类交互平台的 session，11 个 session 全是 `source='cron'`。这种情况下：
+
+- **不要写"[SILENT]"** — 有真实的自动化产出（备份 / 选题 / Wiki / dream cycle / GitHub 监控），不写日报会让系统丢失一整天记录
+- **首行明确标注性质**：`**性质**：纯自动化执行日（凌晨定时任务 + 备份 + dream cycle + GitHub 监控）`
+- **会话总数行注明"0 飞书/微信/TG/cli"**：方便回看时一眼区分人工日 / 自动日
+- **"完成的工作"按 cron session 时间顺序列**，不分类（没有"飞书"、"cron" 分组的必要，因为只有 cron）
+- **"未完成 / 待跟进"要包含跨 session 的横切观察**（如 dream cycle 报告的 14 vs llm-wiki-build 实际的 1 之类的口径不一致），这是全 cron 日相比人工日更值得日报化的地方
+
+**⚠️ "混合日"处理（cron + 飞书/微信/TG/cli 共存）**（2026-06-04 实测，13 session = 2 飞书 + 11 cron）：
+
+混合日比纯 cron 日**更要**重点处理飞书 session，原因：飞书 session 是用户实际意图所在，cron session 是 agent 自己跑的任务总结。处理要点：
+
+- **用 `target_ids` 过滤读取** — 不要把 458 条消息全 print。在第一遍元数据摘要（带 asst 头/尾长度）出来后，识别"高价值 session"（大消息数 + 飞书 + 标题非 None），用一个 `target_ids` 列表再用 `python3 -c` 单独读首/中/末 asst：
+
+  ```python
+  python3 -c "
+  import json
+  with open('/tmp/daily_log/sessions.json') as f: sessions = json.load(f)
+  target_ids = ['feishu_id_1', 'feishu_id_2', 'cron_big_id']
+  for s in sessions:
+      if s['id'] in target_ids:
+          msgs = s['msgs']
+          asst = [m for m in msgs if m[1] == 'assistant']
+          # 打印 first user + asst[0]/中/asst[-1]
+  "
+  ```
+
+- **大飞书 session（>100 msgs）通常有多个子任务** — 不要只读最后一条 asst 当成单一任务；用关键词 grep 找到关键 asst（如含"完成"、"✅"、"全部到位"、数字 9/10 等编号标识）：
+
+  ```python
+  python3 -c "
+  import json
+  with open('/tmp/daily_log/sessions.json') as f: sessions = json.load(f)
+  for s in sessions:
+      if s['id'] == 'big_feishu_id':
+          asst = [m for m in s['msgs'] if m[1] == 'assistant']
+          for i, m in enumerate(asst):
+              if 200 < len(m[2]) < 2500 and ('完成' in m[2] or '✅' in m[2] or 'M3' in m[2]):
+                  print(f'\\n=== ASST[{i}] (len={len(m[2])}) ===\\n{m[2][:1500]}')
+  "
+  ```
+
+- **"生成的文件"块要按子系统分组** — 混合日里"完成的工作"既要按时间序，也要按"统战信息稿 / Wiki / 备份 / Skill 改造 / 飞书交互"分组列；表格化用 `| 文件 | 路径 | 用途 |` 是混合日最有效的呈现
+
+- **首行明确标注比例**：`**会话总数**：13（2 飞书 / 11 cron / 0 微信/TG/cli）` — 比例一目了然
+
+- **真实案例 2026-06-04**：2 个飞书 session 中一个 213 msgs 包含 3 个独立子任务（Win7 ChatBox 兼容 + 41 文件重命名 + M3 多模态 8 skill 改造），每个子任务都值得日报化。如果只读最后一条 asst（用户问"你现在是什么模型"），整日会丢失全部产出。
