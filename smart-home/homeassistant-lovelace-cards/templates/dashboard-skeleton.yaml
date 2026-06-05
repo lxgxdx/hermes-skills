@@ -1,0 +1,167 @@
+# Home Assistant Dashboard 空白骨架
+# 用法：复制到新仪表板（storage 模式）→ 逐段替换 entity_id
+# 风格：5 段式（场景栏 / 房间网格 / 全屋入口 / 环境条 / 搜索）
+
+# ============================================
+# 第 1 段：场景栏
+# ============================================
+type: horizontal-stack
+cards:
+  - type: custom:button-card
+    name: 回家
+    icon: mdi:home-heart
+    show_state: false
+    styles:
+      card:
+        - border-radius: 20px
+        - height: 80px
+        - background: linear-gradient(135deg, #FF6B35 0%, #F7931E 100%)
+      icon: { color: white, size: 32px }
+      name: { color: white, font-size: 14px, font-weight: bold }
+    tap_action:
+      action: call-service
+      service: light.turn_on
+      data: { brightness_pct: 70 }
+      target: { entity_id: light.YOUR_MAIN_LIGHT }
+
+  - type: custom:button-card
+    name: 睡眠
+    icon: mdi:moon-waning-crescent
+    show_state: false
+    styles:
+      card:
+        - border-radius: 20px
+        - height: 80px
+        - background: linear-gradient(135deg, #1E3A5F 0%, #2C5282 100%)
+      icon: { color: white, size: 32px }
+      name: { color: white, font-size: 14px }
+    tap_action:
+      action: call-service
+      service: light.turn_off
+      target: { entity_id: light.all_lights }
+
+  - type: custom:button-card
+    name: 影院
+    icon: mdi:movie-open
+    show_state: false
+    styles:
+      card:
+        - border-radius: 20px
+        - height: 80px
+        - background: linear-gradient(135deg, #2D1B4E 0%, #11052C 100%)
+      icon: { color: '#FFD23F', size: 32px }
+      name: { color: white, font-size: 14px }
+    tap_action:
+      action: call-service
+      service: script.turn_on
+      target: { entity_id: script.cinema_mode }
+
+  - type: custom:button-card
+    name: 全关
+    icon: mdi:power
+    show_state: false
+    styles:
+      card:
+        - border-radius: 20px
+        - height: 80px
+        - background: linear-gradient(135deg, #C41E3A 0%, #8B0000 100%)
+      icon: { color: white, size: 32px }
+      name: { color: white, font-size: 14px }
+    tap_action:
+      action: call-service
+      service: homeassistant.turn_off
+      target:
+        entity_id: [light.all_lights]
+
+# ============================================
+# 第 2 段：房间入口（grid 3 列）
+# 复制此块 1 次/房间，改 hash/name/icon/colors
+# ============================================
+type: grid
+columns: 3
+square: false
+cards:
+  - type: custom:bubble-card
+    card_type: pop-up
+    hash: '#popup-ROOM_SLUG'         # ← 改成房间拼音，如 ke_ting
+    name: ROOM_DISPLAY_NAME           # ← 改成显示名，如 客厅
+    icon: mdi:sofa                    # ← 改图标
+    styles:
+      card:
+        - border-radius: 20px
+        - height: 110px
+        - background: rgba(主色, 0.08)   # ← 改主色，如 #FF6B35
+      icon: { size: 40px, color: 主色 }
+      name: { font-size: 16px, font-weight: bold, color: '#1E3A5F' }
+
+  # 复制上面的 - type: custom:bubble-card ... 块 5-10 次
+
+# ============================================
+# 第 3 段：全屋入口（grid 2 列）
+# ============================================
+type: grid
+columns: 2
+square: false
+cards:
+  - type: custom:bubble-card
+    card_type: pop-up
+    hash: '#popup-global-1'
+    name: 全屋空调
+    icon: mdi:air-conditioner
+    styles:
+      card: { border-radius: 20px, height: 110px, background: rgba(59,130,246,0.08) }
+      icon: { size: 40px, color: '#3B82F6' }
+      name: { font-size: 16px, font-weight: bold }
+
+# ============================================
+# 第 4 段：实时环境条
+# ============================================
+type: custom:bar-card
+  title: 全屋环境
+  height: 70px
+  align: split
+  direction: right
+  style: |
+    bar-card-card {
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      padding: 8px 16px;
+    }
+  entities:
+    - entity: sensor.YOUR_TEMP_ENTITY
+      name: 房间名
+      color_stops: { 0: '#3B82F6', 22: '#22C55E', 28: '#F59E0B' }
+      min: 0
+      max: 40
+
+type: custom:mini-graph-card
+  title: 24小时温度
+  hours_to_show: 24
+  points_per_hour: 4
+  line_width: 2
+  animate: true
+  entities:
+    - entity: sensor.YOUR_TEMP_ENTITY
+      name: 房间名
+      color: '#FF6B35'
+      show_fill: true
+
+# ============================================
+# 第 5 段：搜索 + 自动化
+# ============================================
+type: horizontal-stack
+cards:
+  - type: custom:search-card
+    search_focus: true
+    debounce: 200
+    max_results: 8
+  - type: custom:button-card
+    name: 自动化
+    icon: mdi:cog-transfer
+    show_state: false
+    styles:
+      card: { border-radius: 16px, height: 56px, width: 56px }
+      icon: { color: '#1E3A5F' }
+    tap_action:
+      action: navigate
+      navigation_path: /config/automation

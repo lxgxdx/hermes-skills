@@ -1,0 +1,74 @@
+# 单个房间 popup 最小可工作模板
+# 用法：复制此块，替换 ROOM_SLUG/ROOM_NAME/颜色/entity
+# 添加到仪表板（storage 模式），它不会自动显示，仅在 hash 匹配时弹出
+
+type: custom:bubble-card
+card_type: pop-up
+hash: '#popup-ROOM_SLUG'           # 必须和主入口的 hash 一字不差
+name: ROOM_NAME                     # 显示名
+icon: mdi:sofa                      # mdi 图标
+styles:
+  .:
+    - width: 95vw                   # iPad 兼容
+    - max-width: 500px
+  popup-container:
+    - background: linear-gradient(180deg, rgba(主色,0.05) 0%, rgba(255,255,255,0) 50%)
+    - border-radius: 24px
+cards:
+
+  # === 灯组：第一个用完整 button-card 样式（带状态色） ===
+  - type: custom:button-card
+    entity: light.YOUR_MAIN_LIGHT
+    name: 主灯
+    icon: mdi:lightbulb
+    show_state: true
+    state:
+      - value: 'on'
+        color: 主色
+        styles:
+          card:
+            - background: rgba(主色, 0.15)
+            - box-shadow: 0 4px 16px rgba(主色, 0.3)
+      - value: 'off'
+        color: '#9CA3AF'
+        styles:
+          card:
+            - background: rgba(156,163,175,0.08)
+    styles:
+      card: { border-radius: 16px, height: 70px }
+      icon: { size: 32px }
+      name: { font-size: 16px, font-weight: bold }
+
+  # === 灯组 grid：其他灯放 grid 容器里 ===
+  - type: grid
+    columns: 2
+    square: false
+    cards:
+      - type: custom:bubble-card
+        card_type: button
+        entity: light.YOUR_LIGHT_2
+        name: 副灯
+        icon: mdi:lightbulb-multiple
+      - type: custom:bubble-card
+        card_type: button
+        entity: light.YOUR_LIGHT_3
+        name: 夜灯
+        icon: mdi:led-outline
+
+  # === 窗帘（cover 模式） ===
+  - type: custom:bubble-card
+    card_type: cover
+    entity: cover.YOUR_COVER
+    name: 窗帘
+    show_position: true
+    styles:
+      card: { border-radius: 16px }
+
+  # === 空调（climate 模式） ===
+  - type: custom:bubble-card
+    card_type: climate
+    entity: climate.YOUR_CLIMATE
+    name: 空调
+    show_temperature: true
+    styles:
+      card: { border-radius: 16px }

@@ -407,6 +407,78 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - 关键认知：cron sub-task 提取（regex from first user message）、NFS 选题库→brain project 页映射、0 消息 02:00 sessions 是守卫不是失败
 - 详细记录：`references/dream-cycle-2026-06-04.md`
 
+### Dream Cycle 执行状态（2026-06-06）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00/01:00/01:30 + 02:00 llm-wiki-build）；**全 cron 日，无人类对话**
+- **01:00 tongzhan-info-workflow cron 连续两日失败**（6/5、6/6 同模式）：72 条消息耗尽在 wiki 素材挖掘 + 观察者网新闻抓取阶段，`browser_navigate` 抓取"五眼联盟"原文时中断；NFS `问题类选题_20260606.md` **未生成**
+- **01:30 tongzhan-wiki-build P18 未完成**：183 条消息，能识别政策（中国共产党政治协商工作条例 7章31条）、抓取原文、分析 5 类问题，但 **wiki 文件写入阶段中断**于"用例搜索"步骤
+- 02:00 cron slot 产生 4 个 session（3 个 0 消息守卫 + 1 个 llm-wiki-build 12 消息检查），全部在同一秒（02:00:12）触发
+- wiki→brain 桥接：无新增 wiki 实体（最新 6/5 policy-minzu-tuanjie-promotion-law 已在 brain 中）
+- Project 页面更新：`projects/tongzhan-info-topics` 追加 6/6 执行状态段
+- doctor：✅ health_score 85（与 6/2-6/5 稳定基线一致）
+- embed --stale：104/104 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 104, chunks 203, embedded 203, entity 16, project 17, tags 109（**无变化**）
+- 详细记录：`references/dream-cycle-2026-06-06.md`
+
+### ⚠️ tongzhan-info-workflow 01:00 cron 连续失败模式（2026-06-05/06 实测） — 简化策略
+
+**症状**：01:00 cron 启动后做 wiki 富矿挖掘（读 4-5 篇 policy-*.md）+ 观察者网新闻抓取，session 在 `browser_navigate` 抓取新闻原文时中断，NFS `问题类选题_YYYYMMDD.md` 未生成。
+
+**根因推测**：
+- 72+ 条消息预算用尽（每次 wiki 读取 ~6-8 条 + 每次浏览器操作 ~3-5 条）
+- wiki 挖掘阶段和新闻抓取阶段合计消耗 >50 条
+- 选题草稿已生成但 session 在"补真实事件"时被打断
+
+**下次 cron 重试时的简化策略**（建议实现于 tongzhan-info-workflow skill）：
+1. **跳过 wiki 挖掘**：直接读 session 留底候选（6/6 已在 dream cycle 报告里列出五眼联盟、台当局改口、7 个政策富矿角度）
+2. **限制浏览器操作**：单次 `browser_navigate` 后立即 `browser_snapshot`/`browser_console` 提取文本，不进入详情页
+3. **优先级倒置**：先写 NFS 文件（即使内容粗略），再用剩余 session 预算补真实事件
+4. **断点恢复**：session 中断后 dream cycle 把候选选题写入 `~/brain/projects/tongzhan-info-topics.md` 的"执行状态"段，cron 启动时读这段作为种子
+
+### ⚠️ tongzhan-wiki-build "用例搜索瓶颈"（2026-06-05/06 实测）
+
+**症状**：01:30 cron 能完成"政策识别 → 原文抓取 → 5 类问题分析"，但 wiki 文件**始终在"用例搜索"阶段未写入**。
+
+**已完成工作**（183 条消息用尽时）：
+- ✅ 选定目标政策（如 6/6 的《中国共产党政治协商工作条例》）
+- ✅ 抓取原文（多通过宝鸡市纪委监委等转载站，npc.gov.cn 经常被反爬）
+- ✅ 识别 5 类执行层面问题
+- ❌ 用例搜索（搜索典型执法案例 / 实施问题报道）
+- ❌ wiki 文件写入
+
+**根因**：
+- 用例搜索阶段需多次 `searxng_search` + `browser_navigate`，单次成本高
+- 183 条消息预算不足以同时完成"用例搜索 + wiki 写入"
+
+**建议**：
+1. 优先写"已识别问题 + 原文链接"骨架 wiki 页面（不强求用例）
+2. 用例搜索放到下一轮 cron 或手动补充
+3. dream cycle 监控 `~/wiki/entities/` 是否有新 `policy-*.md` 文件生成
+
+### ⚠️ gbrain get 的 `/page` 后缀问题（2026-06-06 实测）
+
+**症状**：`gbrain get projects/tongzhan-info-topics` 报 `Page not found`，但 `gbrain list` 明确显示该 slug 存在。
+
+**原因**：`gbrain list` 输出的是完整 slug（含 `/page` 后缀），如 `projects/tongzhan-info-topics/page`，但直接 `get` 短名找不到。
+
+**解决**：
+- 始终用 `gbrain list | grep <keyword>` 拿到完整 slug
+- `get` 必须用完整 slug（含 `/page` 后缀）
+- 或者用 fuzzy 匹配：`gbrain get <slug> --fuzzy`（如支持）
+
+### 02:00 cron slot 的 4 个并发 session（2026-06-06 实测）
+
+**观察**：02:00 cron slot 同时产生 4 个 session（02:00:12 同一秒触发）：
+1. `cron_xxx_20260606_020012` dream cycle 自身（0 消息）
+2. `cron_xxx_20260606_020012` dream cycle 守卫（0 消息）
+3. `cron_xxx_20260606_020012` dream cycle 守卫（0 消息）
+4. `cron_xxx_20260606_020012` `llm-wiki-build` 触发（12 消息检查）
+
+**处理**：
+- 3 个 0 消息 session 是 dream cycle + 守卫的占位触发，**不是失败**
+- 1 个 12 消息 session 是 `llm-wiki-build` 在检查是否有新 wiki 页
+- dream cycle 只需看哪个 session 有内容（`message_count > 0`）即可
+
 ### Dream Cycle 执行状态（2026-06-03）
 
 - 实体提取：7 个 cron session，4 个含实际内容；**全 cron 日，无人类对话**
@@ -970,6 +1042,10 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `cat | python3` 或 `python3 << 'EOF'` 报 "approval_required" | tirith:pipe_to_interpreter 安全策略阻止所有管道到解释器 | 用 `write_file` 写脚本到文件，再用 `python3 /tmp/script.py` 执行 |
 | wiki 实体页在 `~/wiki/entities/` 但 `gbrain list` 找不到 | `llm-wiki-build` 只写文件系统，不 push 到 brain 向量库 | Dream cycle 必须加 wiki→brain 桥接步骤（`find -mtime -2` + `gbrain import`） |
 | 全 cron 日 dream cycle 跳过导致 wiki 增量丢失 | "无人类对话"被误判为"无事可做" | cron 任务本身产 wiki 页面/选题/日志，仍按 wiki→brain 桥接处理 |
+| tongzhan-info-workflow 01:00 cron 连续两日失败（6/5+6/6）| wiki 挖掘 + 新闻抓取耗尽 session 消息预算，NFS 文件未生成 | 简化策略：跳过 wiki 挖掘（用 session 留底候选）+ 限制浏览器操作（不进入详情页）+ 优先写 NFS 骨架文件 |
+| tongzhan-wiki-build 01:30 cron 用例搜索瓶颈 | 183 条消息用尽在"用例搜索"，wiki 文件未写入 | 写"已识别问题 + 原文链接"骨架页（不强求用例），用例放下一轮 |
+| `gbrain get <slug>` 短名找不到 | 完整 slug 含 `/page` 后缀（如 `projects/foo/page`） | 始终用 `gbrain list` 拿完整 slug 后再 get |
+| 02:00 cron slot 同时触发 4 个 session | 3 个 0 消息守卫 + 1 个 llm-wiki-build 检查 | 按 `message_count > 0` 过滤即可，0 消息 session 是占位 |
 | `doctor --json` 显示 resolver_health/pgvector/RLS warnings | doctor 的某些检查项在 cron 环境路径解析有 bug | 不影响真实功能；用 `gbrain stats` 验证实际连接 |
 
 ---

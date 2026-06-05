@@ -254,6 +254,7 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 - [ ] 未完成事项有明确的下一步
 - [ ] 已存入 GBrain，slug 格式为 `daily/YYYY-MM-DD`
 - [ ] 已用 `gbrain search <关键词>` 反向验证落库成功（相似度 >0.9）
+- [ ] **【新】对 cron session 汇报的"已创建/已完成"文件，强制 stat 验证 + GBrain 跨源验证**（避免成功幻觉）
 - [ ] 告知用户 slug 名称
 
 ## ⚠️ Context 控制（cron 环境必修）
@@ -346,3 +347,22 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 - **首行明确标注比例**：`**会话总数**：13（2 飞书 / 11 cron / 0 微信/TG/cli）` — 比例一目了然
 
 - **真实案例 2026-06-04**：2 个飞书 session 中一个 213 msgs 包含 3 个独立子任务（Win7 ChatBox 兼容 + 41 文件重命名 + M3 多模态 8 skill 改造），每个子任务都值得日报化。如果只读最后一条 asst（用户问"你现在是什么模型"），整日会丢失全部产出。
+
+- **飞书 session "探索→选型→落地"三段式 asst 读取模式**（2026-06-05 飞书 HA 仪表板 session 实测，36 msgs）：
+  - **asst[6]** ≈ 现状盘点（HA 版本/实体数/已装卡片/户型）
+  - **asst[16]** ≈ 三套方案对比（带详细 YAML 示例 + 设计理念引用）
+  - **asst[17]** ≈ 用户确认选型（"好的，方案 A ..."）
+  - **asst[34]** ≈ 最终完成报告（32.5KB 落地文件路径 + 4 步实施 + 6 风险点 + 5 下一步）
+  - **应对**：不要只读 `asst[0]`（过渡句 50-100 字符）和 `asst[-1]`（最终报告）；中间 asst 包含**关键决策节点**（用户选哪个方案 / agent 决定如何取舍），漏读会丢失决策背景
+  - **飞书 session "等用户实测" 终止状态标注**（2026-06-05 飞书 session 终止点）：agent 完成方案设计 + 写入 wiki + 给出 4 步实施指南后，停在"等用户在 HA 实测反馈"。这种**非中断但未闭环**的 session 必须在「未完成」标 "用户待实测"，避免日报误读为"全部完成"。
+
+**⚠️ Pitfall: cron 任务"成功幻觉"（SUCCESS HALLUCINATION）— 必须 stat 验证**（2026-06-05 新发现）：
+
+- **现象**：agent 写出长且结构化的"完成报告"作为最后一条 asst（含详细文件路径 + 大小 + 实施步骤），但**实际文件未落地**。和"普通截断"（asst last = 0）的关键区别：成功幻觉 = asst last **长且结构化**
+- **首次案例**：2026-06-05 02:00 PVE Wiki cron（`0abf80bf4d`）汇报"已创建 4 个核心页面"，但 `~/wiki/concepts/` 下 4 文件均不存在，GBrain 也搜不到
+- **必做的 3 步验证**（每个 cron session 汇报的关键文件都要做）：
+  1. **filesystem stat**：`ls -la <path> 2>&1` 看文件存在 + 大小 > 1KB
+  2. **GBrain 跨源验证**：`gbrain search "<文件核心实词>"` 看是否有相关 chunk
+  3. **「未完成」顶部标 `⚠️ 成功幻觉`** + 明确建议下一步（重跑 / `delegate_task` / 在对应 skill 模板加 stat 强制校验）
+- **为什么容易漏**："读 asst[-1] = 成果汇报"是 skill 推荐的核心省 context 策略，但**长且结构化**的最后一条 asst 反而最危险——agent 自己会信（"汇报看着像真完成"），daily log generator 也会信（"asst last 长 > 200 字符 = 完成"）
+- **详细分类**见 `references/cron-recurring-bugs.md` §5b

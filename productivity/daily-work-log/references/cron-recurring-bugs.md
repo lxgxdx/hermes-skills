@@ -1,6 +1,6 @@
 # 跨日复现的 cron 任务已知 bug & 信号清单
 
-> 2026-06-04 首次整理。这些 bug 每天会在 cron session 中重复出现，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
+> 2026-06-04 首次整理，2026-06-05 大幅扩充（新增 §5b 成功幻觉 / §5c 前 N 步已规划但未落盘 / §10 dream cycle 0 净增正常信号）。这些 bug 每天会在 cron session 中重复出现，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
 
 ## 🔴 高优先级（每日重复出现的 P0 信号）
 
@@ -8,7 +8,7 @@
 
 - **症状**：所有 cron 任务完成后向飞书回报时返回 `19001 access token invalid`
 - **首次发现**：2026-06-02（48+ 小时）
-- **2026-06-04 状态**：72+ 小时持续失效
+- **2026-06-05 状态**：96+ 小时持续失效
 - **影响**：所有 cron 任务的用户通知全部丢失；用户只能通过每日 00:00 的 daily-work-log cron session 间接看到结果
 - **应对**：daily log 必须在「未完成 / 待跟进」顶部列出此条；连续多日需要在「未完成」开头用 `🔴 **飞书 webhook 持续失效 XX 小时**` 突出显示
 - **修复路径**（需用户操作，不在 cron 范围内）：重新走飞书开放平台授权流程，更新 webhook token 到 `~/.hermes/config.yaml` 或 `.env`
@@ -62,6 +62,39 @@
 - **应对**：必须用 `asst[-1]` 读取 cron 任务的成果汇报；如果 `asst[-1] < 100`，再 `asst[-2]` 复核
 - **已编码在 SKILL.md 主体**（"Pitfall: cron session 的第一条 assistant 消息常常是空字符串"），本条只作为"实测数据"补充
 
+### 5b. cron 任务"成功幻觉"（SUCCESS HALLUCINATION）— 最危险的汇报漂移（2026-06-05 新发现）
+
+- **症状**：agent 写出**结构化"完成报告"**作为最后一条 asst（含详细文件名 + 大小 + 实施步骤 + 下一步），但实际**文件未落地**。和"普通截断"（asst last = 0）的关键区别：成功幻觉 = asst last **长且结构化**（这正是"读 asst[-1] = 成果汇报"策略会漏检的原因）
+- **首次发现**：2026-06-05 02:00 PVE Wiki cron（`0abf80bf4d`，41 msgs / asst last 737 chars）
+  - 汇报"已创建 4 个核心页面：proxmox-ve-install.md / gpu-passthrough.md / frigate-on-pve.md / pve-network-storage.md"
+  - 实际 `~/wiki/concepts/` 下 4 文件**均不存在**
+  - GBrain 搜索 "Proxmox VE 安装" / "GPU 直通" / "Frigate PVE" → 全部无相关 chunk
+- **根因猜测**：agent 在 `write_file` 工具调用失败 / 超时 / context 截断前已经按"假设成功"路径生成汇报段
+- **应对**（daily log 必做的 3 件事）：
+  1. **强制 stat 验证**：对每个 cron session 汇报的关键文件路径，run `ls -la <path> 2>&1` 检查文件存在 + 大小 > 1KB
+  2. **跨源验证**：filesystem 没有 → GBrain `search` 该文件名的核心实词（如政策名 / 技术术语），验证两边都无
+  3. **「未完成」顶部**用 `⚠️ 成功幻觉` 标记 + 明确建议下一步（重跑 / `delegate_task` / 加 stat 强制校验）
+- **修复路径**（在对应 skill 模板里加 stat 校验）：
+  ```bash
+  for f in $EXPECTED_FILES; do
+    [ ! -s "$f" ] && { echo "BUILD_FAILED: $f missing or empty" >&2; exit 1; }
+  done
+  ```
+  或 agent 写完每个文件后跑 `ls -la $f` 自检 + 在最终 asst 报告里只列**实际 stat 出来的**文件
+
+### 5c. 01:00 问题类选题 cron "前 N 步已规划但未落盘" 中断模式（2026-06-05 新发现）
+
+- **症状**：cron session asst last = 0（典型截断），但前 10+ 条 asst 已做完大量实质工作（排重/抓取/选题组合），最后一步 `write_file` 没执行
+- **首次发现**：2026-06-05 01:00（`68a578b26b`，48 msgs / asst last 0）
+  - asst[10] 列出 5 个选题组合（2 类型 A 台湾 + 3 类型 B 制度漏洞）
+  - asst[14] 确认排重完成
+  - `问题类选题_20260605.md` **未生成**
+- **与"未开始"区别**：未开始 = asst 全短过渡句；此模式 = asst 中段已经做了 80% 工作
+- **应对**：
+  1. 检测到 asst last = 0 + 期望输出文件不存在 → 标 `⚠️ 任务疑似中断（已完成 80%，缺落盘）`
+  2. 建议 fallback：用 `delegate_task` 把"把 asst[10] 选题组合写入文件"作为单步任务派发
+  3. 长期：tongzhan-info-workflow skill 的"落盘 step"应拆为独立 sub-step，便于失败重试
+
 ## 🟢 低优先级（一次性的脚本/格式观察）
 
 ### 6. `gbrain` 在 cron 环境下必须 `PATH="$HOME/.bun/bin:$PATH"` 前置
@@ -76,6 +109,12 @@
 - **应对**：日常用 `embed --slugs <slug>` 已验证可用（cron 环境 100% 走通，2-3 chunks）
 - **首次编码位置**：SKILL.md Step 4 末尾 "embed 注意事项"
 
+### 10. dream cycle 0 净增 = 正常信号（不要误报）（2026-06-05 验证）
+
+- **症状**：dream cycle 报告 `pages 101→103 / chunks 194→199`（净增 5），但每步详细日志都是 `imported=0/1/2 unchanged` —— 看起来"无新工作"但实际有增长
+- **真实情况**：0 imported 是因为今日唯一新建（01:30 P17）已被 0130 cron 同步到 GBrain；dream cycle 在 02:00 跑时 P17 已存在；"小幅增长"主要来自日志追加和 tongzhan-info-topics 累计更新（不是新建）
+- **应对**：dream cycle 报告里 `pages/chunks` 净增数 + `imported=0` 看似矛盾但**不需要 follow-up**；只有当 dream cycle 报 `imported > 0` 但 filesystem 找不到对应文件时，才触发"成功幻觉"检查
+
 ## 跨日 follow-up 模板
 
 每日 daily log 中如果检测到以上任一 P0 信号，必须用以下格式突出显示：
@@ -87,6 +126,8 @@
 - 🔴 **GitHub PAT 视为已泄露** — `~/.hermes/skills/.archive/github-pat-retrieval/` 含真实 PAT，建议立即 revoke
 - **hermes-backup.sh 日志写入** — 需加 `exec >> "$LOG_FILE" 2>&1`
 - **dream-cycle 累计逻辑 bug** — 报"pages +N"与实际新建不符（与 YYYY-MM-DD 同一类）
+- ⚠️ **成功幻觉（YYYY-MM-DD）** — <cron session id> 汇报"已完成 X/Y/Z" 但 filesystem + GBrain 双重验证无文件，需重跑 / 加 stat 强制校验
+- ⚠️ **任务疑似中断（已完成 80%，缺落盘）** — <cron session id> asst last=0 但中段已规划完成，建议 `delegate_task` 单步重跑落盘
 ```
 
 其中 XX 小时是"自首次发现"累计时长；连续多日要在 daily log 顶部用 `⚠️ P0 跨日持续` 标注。

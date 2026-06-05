@@ -375,6 +375,149 @@ cards:
 - **Card 调试**：在 Lovelace 右上角点 ⋮ → 编辑仪表板 → 检查卡片 YAML
 - **实体状态**：开发者工具 → 状态，可查看所有实体当前状态和属性
 
+---
+
+## 仪表板设计模式（Design Patterns）
+
+> 卡片文档告诉你"每张卡怎么用"，这一节告诉你"怎么把它们组成漂亮的仪表板"。
+> 详细可复制的样板见 `references/dashboard-design-patterns.md`，空白起步模板见 `templates/dashboard-skeleton.yaml`。
+
+### 四大设计流派（HA 社区 2025-2026 主流）
+
+| 流派 | 代表卡片 | 适合 | 工时 | 视觉 |
+|------|---------|------|------|------|
+| **A. Bubble Card 极简风** | `bubble-card` + `card-mod` | 苹果/米家风，手机+平板 | 中 | ⭐⭐⭐⭐ |
+| **B. 3D 房型数字孪生** | `floor3d-card` | 桌面/iPad 大屏 | 中（需画 3D 房型） | ⭐⭐⭐⭐⭐ |
+| **C. 三件套混搭** | `floor3d + bubble + bar` | 兼顾多设备 | 高 | ⭐⭐⭐⭐⭐ |
+| **D. 经典 entities/glance** | 内置卡 + `mini-graph` | 简单粗暴 | 低 | ⭐⭐ |
+
+> **决策捷径**：用户已装 22 个 HACS 卡片（包括 bubble_card + floor3d）→ 优先方案 A 或 C。
+> 如果只是想看，开内置 `entities` 卡片就够；**别上来就堆 custom card**。
+
+### 核心 5 段式布局（任何方案都适用）
+
+```
+┌─────────────────────────────────────┐
+│ 第1段：场景栏（4个一键场景按钮）       │   ← button-card
+│ 回家/睡眠/影院/全关                   │
+├─────────────────────────────────────┤
+│ 第2段：房间入口（grid 3列）           │   ← bubble-card pop-up
+│ 客厅/餐厅/主卧...                     │
+├─────────────────────────────────────┤
+│ 第3段：全屋入口（grid 2列）           │   ← bubble-card pop-up
+│ 阳台/全屋空调/浴室/摄像头             │
+├─────────────────────────────────────┤
+│ 第4段：实时环境条                     │   ← bar-card / mini-graph
+│ 温湿度/电量/统计                      │
+├─────────────────────────────────────┤
+│ 第5段：搜索 + 自动化入口              │   ← search-card
+└─────────────────────────────────────┘
+```
+
+### 调色板规则（必读）
+
+每房间一个**主色**，统一公式：
+
+```yaml
+styles:
+  card:
+    - background: rgba(主色, 0.08)    # 8% 不透明背景
+  icon:
+    - color: 主色                     # 100% 饱和图标
+  name:
+    - color: 文字主色
+    - font-weight: bold
+```
+
+参考 13 色调色板：`#FF6B35` 客厅橙 / `#FF922B` 餐厅 / `#6366F1` 主卧紫蓝 / `#EC4899` 儿童粉 / `#22C55E` 父母绿 / `#0EA5E9` 书房蓝 / `#A855F7` 衣帽间紫 / `#6B7280` 玄关灰 / `#78716C` 走廊暖灰 / `#3B82F6` 全屋蓝 / `#6366F1` 浴室 / `#EF4444` 摄像头红 / `#22C55E` 阳台绿。
+
+---
+
+## ⚠️ Bubble Card Popup 必踩的 5 个坑
+
+1. **必须用 storage 模式建仪表板**（不是 YAML 模式）— 否则 hash 跳转 100% 失败，且无报错
+2. **Bubble Card Tools 必须独立装**（不在 Bubble Card 自动依赖里）— 装好后**重启 HA**
+3. **主入口的 `hash: '#xxx'` 和 popup 卡片的 `hash: '#xxx'` 必须一字不差** — 大小写、连字符、特殊字符都要核对
+4. **popup 卡片也算"一张卡片"** — 添加到仪表板，**不要点它**，它只在 hash 被触发时显示
+5. **iPad 宽度要写 `width: 95vw; max-width: 500px`** — 不写 popup 会占满整屏，iPad 看不清
+
+```yaml
+# ✅ 正确：主入口
+- type: custom:bubble-card
+  card_type: pop-up
+  hash: '#popup-ke_ting'   # ← 这个
+  name: 客厅
+  icon: mdi:sofa
+
+# ✅ 正确：popup 卡片（独立一张卡）
+- type: custom:bubble-card
+  card_type: pop-up
+  hash: '#popup-ke_ting'   # ← 和上面一字不差
+  cards:
+    - ...  # popup 内的子卡片
+```
+
+### 调试 popup 不弹
+
+1. 打开浏览器 F12 → Console，看是否有红字
+2. 90% 情况是 hash 不一致 → 复制粘贴两边对照
+3. 9% 情况是 Bubble Card Tools 没装 → HACS 重装 + 重启 HA
+4. 1% 情况是 YAML 模式仪表板 → 新建一个 storage 模式的
+
+---
+
+## 中文环境特殊技巧（拼音前缀房间归类）
+
+> 用户的实体 ID 拼音前缀是金矿，entity_id 命名规则暴露了**房间归属**。用 Python 脚本一次扫出所有归类。
+
+```python
+# 核心逻辑
+ROOM_MAP = {
+    "ke_ting": "客厅", "can_ting": "餐厅",
+    "zhu_wo": "主卧", "er_tong_fang": "儿童房",
+    "fu_mu_fang": "父母房", "shu_fang": "书房",
+    # ...
+}
+
+def room_of(eid):
+    base = eid.split(".",1)[1]
+    parts = base.split("_")
+    for i in range(min(3, len(parts))):
+        p = "_".join(parts[:i+1])
+        if p in ROOM_MAP: return ROOM_MAP[p]
+    return "其他"
+```
+
+**跳过元数据**（重要 — 否则卡片会塞满）：
+```python
+SKIP_SUFFIX = ("_power_outage_memory", "_flip_indicator_light",
+               "_led_disabled_night", "_vertical_swing", "_alarm",
+               "_blow", "_heating", "_ventilation", "_child_lock",
+               "_status_indicator_light", "_dnd_switch",
+               "_valley_electricity_switch", "_zone_enable",
+               "_zout1_enable", "_illuminance_fast_update",
+               "_ai_interference_source_selfidentification",
+               "_ai_sensitivity_adaptive", "_uv", "_switch_status")
+SKIP_KEYWORDS = ["_use_listen_light", "dahua_", "frigate_card",
+                 "_zigbee_permit", "permit_join", "0x", "32c3",
+                 "electricity_meter_", "qdhkl_ac_",
+                 "keting_detect", "keting_motion",  # Frigate 派生
+                 "keting_recordings", "keting_snapshots",
+                 "keting_review", "keting_audio", "keting_ptz",
+                 "d14feb", "0e949f", "screen",  # 摄像头 ID
+                 "apple_tv", "qbittorrent",
+                 "indicator_light"]
+```
+
+---
+
+## 相关资源
+
+- `references/dashboard-design-patterns.md` — 4 大流派详细对比 + 完整 13 房间 popup YAML 样板（碧桂园案例）
+- `templates/dashboard-skeleton.yaml` — 空白起步骨架（场景栏 + 9 房间 grid + 环境条）
+- `templates/bubble-popup-template.yaml` — 单个房间 popup 的最小可工作模板
+- `scripts/scan_rooms.py` — 拼音前缀房间归类扫描脚本
+
 ## 更多卡片
 
 以下卡片用法详见 HA Wiki（~/ha-wiki/）：

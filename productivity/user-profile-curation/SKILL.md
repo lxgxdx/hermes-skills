@@ -101,6 +101,28 @@ content for any session mentioning:
 session_search(session_id="...", around_message_id=12345, window=10)
 ```
 
+#### ⚠️ Persisted-output session_search trap
+
+`session_search` discovery mode returns up to ~220KB per query. When a
+keyword hits a high-traffic topic (e.g. "统战", "政府", "用户"),
+the result is auto-saved to `/tmp/hermes-results/call_function_<id>_<n>.txt`
+and you see only a 1500-char preview. **The preview's `bookend_start` /
+`messages` are the actual content — read them with `read_file` on
+specific line ranges, do NOT try to re-query.** Reading the persisted
+file directly is faster than re-running the same search.
+
+Typical workflow:
+1. Notice the "This tool result was too large" message + persisted path
+2. `read_file(path, offset=N, limit=200)` to scan top of the result
+3. Pick session IDs that match the buckets you care about (corrections,
+   new discoveries, recurring topics)
+4. `session_search(session_id=<id>, around_message_id=<anchor>, window=10)`
+   to deep-scroll the high-value ones
+
+Also: large results are deduped per `session_id` + snippet, so a single
+broad query can be more useful than 5 narrow ones if you cast a wide
+net deliberately.
+
 ### 5. Generate the v(n) report
 
 8-section Markdown structure. See `references/v4-template.md` for the
@@ -206,6 +228,33 @@ or try to deliver the output yourself. Just produce your report/output
 as your final response and the system handles the rest." The user's
 notification channel is the gateway's job, not the agent's.
 
+### ⚠️ Cron "成功幻觉" — agent 汇报与现实脱节
+
+In cron mode, agent sometimes reports "已创建 N 个文件" in the final
+asst message but the files don't actually exist on disk. Two real
+patterns observed in 2026-06-05 alone:
+
+1. **PVE Wiki cron** (`llm-wiki-build`): asst said "4 core pages created"
+   but `ls ~/wiki/concepts/` showed all 4 missing. GBrain search also
+   returned no hits.
+2. **Problem-class topics cron** (`tongzhan-info-workflow`): asst last
+   message was 0 chars, the target file was never written even though
+   intermediate asst messages had completed the content design.
+
+The user-profile report itself is a cron write — v(n) MUST verify
+the 3 files have non-zero size AND GBrain has a `user-profile-YYYYMMDD`
+slug before declaring success.
+
+**Mitigation (defense-in-depth)**:
+- After every `write_file`, run `os.path.getsize()` to confirm > 1KB
+- Add a verification step to the final asst report (show actual file
+  sizes, not the count)
+- Use the shared `scripts/verify-cron-writes.sh` helper for batched
+  writes (see See also)
+
+See `references/cron-success-hallucination.md` for full analysis +
+3 affected skills + the verification script.
+
 ### ⚠️ Don't make the file much bigger without justification
 
 If v(n) jumps from 19KB to 40KB, you probably re-invented fields
@@ -234,7 +283,8 @@ session directly.
 
 - [ ] 3 files exist with non-zero size: `USER.md`,
       `user_model_report_YYYYMMDD.md`,
-      `daily/YYYY-MM-DD-user-model-snapshot.md`
+      `daily/YYYY-MM-DD-user-model-snapshot.md` (sizes should be in the
+      KB range, not 0B)
 - [ ] GBrain `user-profile-YYYYMMDD` slug returns hits in semantic
       search (`gbrain search "<a unique phrase from the report>"`)
 - [ ] `gbrain stats` shows total chunks grew by ~1 from the new slug
@@ -243,6 +293,10 @@ session directly.
 - [ ] All v(n-1) corrections still present in v(n) — corrections are
       append-only, never deleted
 - [ ] Final response includes the full report (cron auto-delivers)
+- [ ] Final asst's "完成报告" lists actual file sizes (not just counts)
+      — see cron-success-hallucination pitfall above
+- [ ] For batched writes (e.g. N wiki pages), `scripts/verify-cron-writes.sh`
+      exit code is 0 before declaring success
 
 ## See also
 
@@ -257,3 +311,8 @@ session directly.
 - `references/gbrain-ingestion-quirks.md` — two real GBrain verification
   gotchas ("already embedded" ≠ findable; stats lag); read this BEFORE
   the GBrain step in the workflow, not after panicking
+- `references/cron-success-hallucination.md` — **cron task "成功幻觉"
+  failure pattern + 3-layer defense**; relevant for any write-bearing
+  cron skill (wiki builder, info workflow, etc.), not just this one
+- `scripts/verify-cron-writes.sh` — bash helper that checks N paths
+  exist and are >= 1KB. Use as the last step of any cron write task.

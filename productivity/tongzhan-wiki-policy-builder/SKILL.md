@@ -63,6 +63,16 @@ head -15 ~/wiki/entities/policy-{slug}.md
 | 4 | 国务院政策文件库 | https://www.gov.cn/zhengce/ | 行政法规 |
 | 5 | 地方人大网 | 各省人大官网 | 地方实施条例 |
 | 6 | 中央统战部 | http://www.zytzb.gov.cn/ | 统战综合 |
+| 7 | **各地纪委监委网站**（如 qinfeng.gov.cn 宝鸡市纪委监委）| 各省/市 qinfeng.gov.cn / jjjc.gov.cn | **中央党内法规全文转载源** — 当 qstheory.cn / news.cn / gov.cn 都不稳定时，地方纪委监委常稳定转载新华社全文 |
+| 8 | **中国政协网** | http://www.cppcc.gov.cn/ | 政协协商、统战理论、政协系统部署 |
+| 9 | **人民政协网** | https://www.rmzxw.com.cn/ | 协商实例、委员故事、理论时评 |
+
+**⚠️ 党内法规全文找法（2026-06-06 新发现）**：
+- 中央党内法规（中央办公厅/中央统战部/中共中央发布的）**不在** `flk.npc.gov.cn`（仅收法律法规）
+- 也**不在** `gov.cn/zhengce`（仅收行政规章）
+- qstheory.cn、news.cn 经常返回 404 或被本地化过滤
+- **可靠的稳定来源**：地方纪委监委网站（如 `qinfeng.gov.cn/info/xxxx/xxxx.htm`）几乎 100% 转载新华社全文，且 URL 模式稳定不易过期
+- 备选：人民政协报电子版、各地党报数字报（epaper.tibet3.com 等），但需逐个试 URL
 
 **⚠️ Vue SPA 警告**：`flk.npc.gov.cn` 是 Vue 单页应用，**curl 返回的只是 SPA 容器 HTML**（`<div id="app">`）。必须：
 - `browser_navigate(url)` 打开 → `browser_snapshot(full=true)` 或 `browser_console(expression='document.body.innerText')` 提取"命中展示"片段
@@ -95,6 +105,21 @@ browser_navigate("https://cn.bing.com/search?q={政策关键词}+{问题关键�
 - 表面上 `b_results` 元素存在但内容固定，无法获取新结果
 - **应对**：跳过搜索引擎，**直接走首选策略**——访问国家民委 neac.gov.cn / 中央党校 ccps.gov.cn / 新华网 news.cn 的首页或对应栏目，手动浏览"时政要闻"列表
 - **新法/未生效法的案例替代方案**：若 Bing 实在返回不了新结果，可改用"近期官方释义文章 + 学术论坛动态 + 主管机关部署会议"作为"未生效期间的制度问题信号"（详见下方"未生效新法处理方法"小节）
+
+**⚠️ Bing 搜索结果 URL 大量 404（2026-06-06 新发现）**：
+- Bing 列出的搜索结果看起来 URL 完整（如 `qstheory.cn/dukan/qs/2022-07/15/c_xxx.htm`、`epaper.tibet3.com/qhrb/html/2022-06/21/content_xxx.htm`、`yndaily.yunnan.cn/content/202206/21/content_xxxx.html`）
+- **实际全部返回 404**——Bing 索引的链接已被源站清理
+- **应对**：不要直接相信 Bing snippet 里的 URL；**优先打开 Bing 列出的 gov.cn / xinhuanet.com 等核心域名的链接**（这些通常稳定）；其他次级域链接先 curl HEAD 验证再写入 sources
+
+**⚠️ 中国政协网搜索 URL 模式不稳定（2026-06-06 新发现）**：
+- `cppcc.gov.cn/zxww/search.html?keyword=...&page=N` 和 `rmzxw.com.cn/search.html?keyword=...` 均返回空页或 404
+- 中国政协网的站内搜索只能通过首页搜索框交互触发，URL 不可直接构造
+- **应对**：使用首页搜索框 + 浏览器交互；或直接访问"权威发布"/"协商"等固定栏目
+
+**⚠️ 中央统战部子页面 404 严重（2026-06-06 新发现）**：
+- `zytzb.gov.cn/zytzb/YYYY-MM/DD/content_xxx.htm`、`zytzb.gov.cn/9100/9148/index.html` 等均 404
+- 推测是网站改版后旧 URL 失效
+- **应对**：中央统战部首页 → 走"统战时讯"/"理论时评"/"统战百科"等导航链接；不要从 Bing 索引的旧 URL 跳转
 
 **案例应包含字段**：
 - 标题、发布日期、来源 URL
@@ -239,6 +264,7 @@ sources:
 - `templates/policy-page-template.md` — 完整的 policy-xxx.md 页面模板（8-9 章节），可直接 `reproduce with modifications`
 - `references/wiki-knowledge-base.md` — 5 类"执行层面问题"框架详解、已建政策清单、来源站点速查、浏览器抓取技术要点
 - `references/unenforced-law-handling.md` — **未生效新法/软法** 的处理方法（含 P17 范例、四类案例替代来源、软法自评清单、写作模板）
+- `references/stable-sources.md` — **稳定 URL 备查表**（2026-06-06 沉淀）：地方纪委监委转载中央党内法规的稳定 URL 模式、政协系统案例源、必须 curl 验证再写入 sources 的 Bing 索引 URL 黑名单
 
 ## 关联技能
 
@@ -266,3 +292,8 @@ sources:
 - [ ] "执行案例"已**明确标注**为"准备实施阶段信号"而非"执法案例"
 - [ ] 已说明"软法性质"——倡导性条款占比 + 法律责任缺位
 - [ ] 已附"与本县工作相关"小节（特别是散居地区条款少的情况）
+
+**关键工作纪律（2026-06-06 新增）**：
+- ⚠️ **案例未找到时，绝不写页面的"典型案例"章节**——宁可留下 `⚠️ 待补充` 占位，也不要用模型领域知识伪造执法案例
+- ⚠️ 步骤 3 失败时，**报告任务时明确标注"步骤 X 未完成"**（如本任务中步骤 3、4、5 全部链式失败），并在下一次 cron run 中从头重试
+- ⚠️ 不要因为"想完成 KPI"而把未验证的"近 3 个月案例"凭印象凑数——这会污染知识库，导致后续信息稿选题基于虚假证据
