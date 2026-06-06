@@ -3,14 +3,14 @@
     "archived_at": null,
     "created_at": "2026-05-12T04:30:09.554552+00:00",
     "created_by": null,
-    "last_patched_at": "2026-06-05T16:09:46.077935+00:00",
-    "last_used_at": "2026-06-05T16:09:58.759386+00:00",
-    "last_viewed_at": "2026-06-05T16:09:58.749352+00:00",
-    "patch_count": 25,
+    "last_patched_at": "2026-06-06T16:08:13.396307+00:00",
+    "last_used_at": "2026-06-06T18:06:09.330611+00:00",
+    "last_viewed_at": "2026-06-06T18:06:09.322432+00:00",
+    "patch_count": 30,
     "pinned": false,
     "state": "active",
-    "use_count": 46,
-    "view_count": 21
+    "use_count": 52,
+    "view_count": 26
   },
   "doc-file-conversion": {
     "archived_at": null,
@@ -66,25 +66,25 @@
     "created_at": "2026-05-16T18:00:53.331355+00:00",
     "created_by": null,
     "last_patched_at": null,
-    "last_used_at": "2026-06-04T18:00:48.334439+00:00",
-    "last_viewed_at": "2026-06-04T18:00:48.310863+00:00",
+    "last_used_at": "2026-06-06T18:01:05.760242+00:00",
+    "last_viewed_at": "2026-06-06T18:01:05.741425+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 4,
-    "view_count": 4
+    "use_count": 5,
+    "view_count": 5
   },
   "gbrain-ops": {
     "archived_at": null,
     "created_at": "2026-05-02T18:05:35.099133+00:00",
-    "last_patched_at": "2026-06-05T18:07:16.331604+00:00",
-    "last_used_at": "2026-06-05T18:06:52.052993+00:00",
-    "last_viewed_at": "2026-06-05T18:06:52.044630+00:00",
-    "patch_count": 52,
+    "last_patched_at": "2026-06-06T18:07:11.158725+00:00",
+    "last_used_at": "2026-06-06T18:01:05.750958+00:00",
+    "last_viewed_at": "2026-06-06T18:01:05.727758+00:00",
+    "patch_count": 54,
     "pinned": false,
     "state": "active",
-    "use_count": 43,
-    "view_count": 39
+    "use_count": 44,
+    "view_count": 40
   },
   "github-pat-retrieval": {
     "archived_at": null,
@@ -128,13 +128,13 @@
     "created_at": "2026-06-01T14:53:19.407836+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-01T14:54:20.634808+00:00",
-    "last_used_at": null,
-    "last_viewed_at": null,
+    "last_used_at": "2026-06-06T16:18:10.180492+00:00",
+    "last_viewed_at": "2026-06-06T16:18:09.917894+00:00",
     "patch_count": 4,
     "pinned": false,
     "state": "active",
-    "use_count": 0,
-    "view_count": 0
+    "use_count": 1,
+    "view_count": 1
   },
   "hermes-session-stuck-debug": {
     "archived_at": null,
@@ -178,13 +178,13 @@
     "archived_at": null,
     "created_at": "2026-05-08T09:07:47.884214+00:00",
     "last_patched_at": "2026-05-09T18:07:06.678743+00:00",
-    "last_used_at": "2026-06-05T12:00:23.294767+00:00",
-    "last_viewed_at": "2026-06-05T08:34:01.388267+00:00",
+    "last_used_at": "2026-06-06T12:00:08.165394+00:00",
+    "last_viewed_at": "2026-06-05T23:41:11.710840+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 34,
-    "view_count": 6
+    "use_count": 36,
+    "view_count": 7
   },
   "homeassistant-discovery": {
     "archived_at": null,
@@ -229,12 +229,12 @@
     "archived_at": null,
     "created_at": "2026-05-06T18:02:56.374398+00:00",
     "last_patched_at": "2026-06-04T18:04:54.842123+00:00",
-    "last_used_at": "2026-06-05T18:00:12.631782+00:00",
+    "last_used_at": "2026-06-06T18:00:56.147342+00:00",
     "last_viewed_at": "2026-06-04T18:04:21.083311+00:00",
     "patch_count": 16,
     "pinned": false,
     "state": "active",
-    "use_count": 39,
+    "use_count": 40,
     "view_count": 11
   },
   "meeting-minutes-generator": {
@@ -294,13 +294,13 @@
     "created_at": "2026-05-24T16:06:40.869411+00:00",
     "created_by": "agent",
     "last_patched_at": null,
-    "last_used_at": null,
-    "last_viewed_at": null,
+    "last_used_at": "2026-06-06T16:18:10.530593+00:00",
+    "last_viewed_at": "2026-06-06T16:18:10.168080+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 0,
-    "view_count": 0
+    "use_count": 1,
+    "view_count": 1
   },
   "pdf-image-ocr-scan": {
     "archived_at": null,
@@ -357,13 +357,13 @@
     "created_at": "2026-06-02T00:11:31.584889+00:00",
     "created_by": "agent",
     "last_patched_at": "2026-06-02T00:12:03.384993+00:00",
-    "last_used_at": null,
-    "last_viewed_at": null,
+    "last_used_at": "2026-06-06T16:18:10.525296+00:00",
+    "last_viewed_at": "2026-06-06T16:18:10.163488+00:00",
     "patch_count": 1,
     "pinned": false,
     "state": "active",
-    "use_count": 0,
-    "view_count": 0
+    "use_count": 1,
+    "view_count": 1
   },
   "ppt-master-usage": {
     "archived_at": null,
@@ -419,38 +419,38 @@
     "created_at": "2026-06-04T06:48:33.963444+00:00",
     "created_by": "agent",
     "last_patched_at": null,
-    "last_used_at": null,
-    "last_viewed_at": null,
+    "last_used_at": "2026-06-06T16:18:10.534565+00:00",
+    "last_viewed_at": "2026-06-06T16:18:10.172637+00:00",
     "patch_count": 0,
     "pinned": false,
     "state": "active",
-    "use_count": 0,
-    "view_count": 0
+    "use_count": 1,
+    "view_count": 1
   },
   "tongzhan-info-workflow": {
     "archived_at": null,
     "created_at": "2026-05-03T17:04:25.564838+00:00",
     "last_patched_at": "2026-06-05T18:17:41.151410+00:00",
-    "last_used_at": "2026-06-05T18:10:09.988771+00:00",
-    "last_viewed_at": "2026-06-05T18:10:09.978418+00:00",
+    "last_used_at": "2026-06-06T17:01:24.843167+00:00",
+    "last_viewed_at": "2026-06-06T17:01:24.829376+00:00",
     "patch_count": 241,
     "pinned": false,
     "state": "active",
-    "use_count": 200,
-    "view_count": 200
+    "use_count": 201,
+    "view_count": 201
   },
   "tongzhan-wiki-policy-builder": {
     "archived_at": null,
     "created_at": "2026-06-03T17:41:06.603323+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-06-05T17:48:50.766126+00:00",
-    "last_used_at": "2026-06-05T17:31:02.311355+00:00",
-    "last_viewed_at": "2026-06-05T17:31:02.298569+00:00",
-    "patch_count": 15,
+    "last_patched_at": "2026-06-06T17:42:37.710015+00:00",
+    "last_used_at": "2026-06-06T17:41:29.320417+00:00",
+    "last_viewed_at": "2026-06-06T17:41:29.310900+00:00",
+    "patch_count": 22,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 8,
+    "view_count": 8
   },
   "tz-file-organizer": {
     "archived_at": null,
@@ -469,14 +469,14 @@
     "archived_at": null,
     "created_at": "2026-06-03T18:07:16.262044+00:00",
     "created_by": "agent",
-    "last_patched_at": "2026-06-05T18:09:46.308868+00:00",
-    "last_used_at": "2026-06-05T18:07:05.237210+00:00",
-    "last_viewed_at": "2026-06-05T18:07:05.228079+00:00",
-    "patch_count": 11,
+    "last_patched_at": "2026-06-06T18:07:17.999893+00:00",
+    "last_used_at": "2026-06-06T18:07:48.781553+00:00",
+    "last_viewed_at": "2026-06-06T18:07:48.773088+00:00",
+    "patch_count": 13,
     "pinned": false,
     "state": "active",
-    "use_count": 3,
-    "view_count": 3
+    "use_count": 8,
+    "view_count": 8
   },
   "wechat-mp-format": {
     "archived_at": null,

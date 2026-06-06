@@ -241,7 +241,7 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 ## 参考资料
 
 - `references/cron-runbook.md` — **逐行可复用的 cron 模式命令序列**（从查询 → 落库 → 验证完整流程），含所有已知陷阱的速查表
-- `references/cron-recurring-bugs.md` — **跨日复现的 cron 任务已知 bug & 信号清单**（飞书 webhook 失效 / backup.log 缺失 / GitHub PAT 拦截 / dream cycle 累计 bug），必须显式标注在「未完成 / 待跟进」
+- `references/cron-recurring-bugs.md` — **跨日复现的 cron 任务已知 bug & 信号清单**（飞书 webhook 失效 / backup.log 缺失 / GitHub PAT 拦截 / dream cycle 累计 bug / §5b 成功幻觉 / §5c 80% 已完成未落盘 / §5d cron SILENT 占位符 / §11 混合日 lite 模式），必须显式标注在「未完成 / 待跟进」
 
 ---
 
@@ -255,6 +255,7 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 - [ ] 已存入 GBrain，slug 格式为 `daily/YYYY-MM-DD`
 - [ ] 已用 `gbrain search <关键词>` 反向验证落库成功（相似度 >0.9）
 - [ ] **【新】对 cron session 汇报的"已创建/已完成"文件，强制 stat 验证 + GBrain 跨源验证**（避免成功幻觉）
+- [ ] **【新】检测每个 cron session asst last 是否是字面量 `[SILENT]`**（8 字符），非守护型任务视为未执行
 - [ ] 告知用户 slug 名称
 
 ## ⚠️ Context 控制（cron 环境必修）
@@ -308,6 +309,20 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 - **"完成的工作"按 cron session 时间顺序列**，不分类（没有"飞书"、"cron" 分组的必要，因为只有 cron）
 - **"未完成 / 待跟进"要包含跨 session 的横切观察**（如 dream cycle 报告的 14 vs llm-wiki-build 实际的 1 之类的口径不一致），这是全 cron 日相比人工日更值得日报化的地方
 
+**⚠️ "混合日 lite" 处理（1 飞书 + 11 cron + 0 微信/TG/cli）（2026-06-06 实测）**：
+
+介于"全 cron 日"和"混合日"之间的常见模式。飞书是单主题小 session（19 msgs 左右），cron 占绝对多数。
+
+- **首行明确标注比例**：`会话总数：12（1 飞书 / 11 cron / 0 微信/TG/cli）` — 比例一目了然
+- **飞书 session 处理**：用 §混合日 asst 头/中/尾三段式读取（如 RuView session asst[2]/asst[8]/asst[10]），但飞书 msgs 较少时单条汇报也够用
+- **cron 任务归类**：
+  - **00:00 daily-work-log** —— "昨日日报落库"
+  - **01:00 + 01:30 + 02:00×4 + 03:00 + 06:00** —— 7 个标准时段（信息稿/Wiki/备份/Skill 同步）
+  - **20:00 + 21:00** —— 6/6 全部 SILENT（§5d）
+- **"未完成"块必须包含 cron 横切观察**（如今日 3 个 SILENT cron + 01:00 连续 2 日失败 + 02:00 PVE wiki 连续 2 日成功幻觉）
+- **cron 健康度评分**：今日 3/12 = 25% cron 失败率（3 SILENT + 0 中断 + 0 成功幻觉），写入「未完成」便于跨日追踪健康度趋势
+- **真实案例 2026-06-06**：1 个飞书 session 是 RuView WiFi 感知技术调研（19 msgs / 2 段答复：仓库评估 + Aruba 兼容性），不读 asst 中段会丢失"Aruba 不需要支持 CSI"这个关键澄清
+
 **⚠️ "混合日"处理（cron + 飞书/微信/TG/cli 共存）**（2026-06-04 实测，13 session = 2 飞书 + 11 cron）：
 
 混合日比纯 cron 日**更要**重点处理飞书 session，原因：飞书 session 是用户实际意图所在，cron session 是 agent 自己跑的任务总结。处理要点：
@@ -355,6 +370,23 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
   - **asst[34]** ≈ 最终完成报告（32.5KB 落地文件路径 + 4 步实施 + 6 风险点 + 5 下一步）
   - **应对**：不要只读 `asst[0]`（过渡句 50-100 字符）和 `asst[-1]`（最终报告）；中间 asst 包含**关键决策节点**（用户选哪个方案 / agent 决定如何取舍），漏读会丢失决策背景
   - **飞书 session "等用户实测" 终止状态标注**（2026-06-05 飞书 session 终止点）：agent 完成方案设计 + 写入 wiki + 给出 4 步实施指南后，停在"等用户在 HA 实测反馈"。这种**非中断但未闭环**的 session 必须在「未完成」标 "用户待实测"，避免日报误读为"全部完成"。
+
+**⚠️ Pitfall: cron session 整段只返回字面量 `[SILENT]`（8 字符）（2026-06-06 新发现）**：
+
+- **现象**：cron session 的最后一条 asst 内容是字面字符串 `[SILENT]`（长度仅 8），没有 skill 注入后的过渡句、没有失败原因、没有完成报告。是**第三种截断模式**，与已知的"空字符串截断"和"成功幻觉"都不同
+- **首次批量发现**：2026-06-06 三个 cron session 同时中招：
+  - `cron_0abf80bf4d68_20260606_020012`（llm-wiki-build，PVE wiki 概念页）—— 12 msgs / asst last = `[SILENT]`
+  - `cron_8670107d659c_20260606_200008`（home-assistant-ops）—— 5 msgs / asst last = `[SILENT]`
+  - `cron_e08019f497a1_20260606_210022`（check-wechat-issue）—— 4 msgs / asst last = `[SILENT]`
+- **与"空字符串截断"区别**：`asst last = ''`（len=0）通常出现在 agent 进入死循环后被截断；`[SILENT]` 字符串是 agent 显式决定的"我没什么可汇报的"信号
+- **与"成功幻觉"区别**：成功幻觉 = asst last 长且结构化（看着像真完成）；`[SILENT]` = asst last 极短（看着像真没做事）
+- **根因猜测**（待 6/7 02:00 验证）：skill 注入型 user 消息（10k+ 字符）让 agent 推断"任务已由其他 cron 接管 / 我没新增信息可报"，直接用 SILENT 占位；或 skill 模板本身要求 agent 在无新产出时回 SILENT
+- **检测**：`last_len == 8 and content.strip() == '[SILENT]'` 一行精确匹配；老的 `< 100` 阈值已能 catch 但有 FP（首条短过渡句也可能 < 100）
+- **应对**：
+  1. **读 skill 全文**确认该 cron job 是不是"应该静默的守护型任务"（如 gbrain doctor / skills sync 的二次校验）
+  2. **非守护型任务 + SILENT** → 视为"任务未执行"，在「未完成 / 待跟进」标 `❌ cron SILENT（未执行）`
+  3. **跨日累计同类**：若 6/6 已有 3 个 SILENT cron，6/7 02:00 cron 必须复跑这 3 个任务
+- **为什么重要**：今天 1 飞书 + 11 cron 的"混合日 lite"模式下，3 个 SILENT cron 占据了 25% 的 cron 任务量；如果不显式标注，整日 cron 产出统计严重虚高
 
 **⚠️ Pitfall: cron 任务"成功幻觉"（SUCCESS HALLUCINATION）— 必须 stat 验证**（2026-06-05 新发现）：
 

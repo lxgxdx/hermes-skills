@@ -268,10 +268,79 @@ section but don't duplicate existing content.
 ### ⚠️ Cron env has additional constraints
 
 Inherited from `daily-work-log` pitfalls:
-- `execute_code` is **disabled** in cron (returns BLOCKED)
+- `execute_code` is **disabled** in cron (returns BLOCKED on first call)
 - `terminal` heredoc (`python3 << EOF`) is **pattern-blocked**
 - `sqlite3` CLI is **not in PATH** — use `python3 -c "..."` instead
 - `gbrain` requires explicit `PATH="$HOME/.bun/bin:$PATH"` prefix
+
+**Worked example — backing up v(n-1) USER.md before overwrite** (v7 cron
+session, 2026-06-07, when `execute_code` was BLOCKED):
+
+```bash
+# ❌ WRONG — execute_code is BLOCKED in cron, no fallback
+python3 -c "import shutil, time; shutil.copy('USER.md', f'USER.md.bak.v6_{int(time.time())}')"
+
+# ✅ RIGHT — go through terminal directly with single-line -c
+terminal(command="""python3 -c "
+import shutil, time
+ts = int(time.time())
+shutil.copy('/home/lxgxdx/.hermes/memories/USER.md', f'/home/lxgxdx/.hermes/memories/USER.md.bak.v6_{ts}')
+print(f'已备份 v6 → USER.md.bak.v6_{ts}')
+"""")
+```
+
+**Note**: Hermes auto-backs up the previous USER.md when you overwrite it
+with `cp`/`write_file`, so an explicit backup is technically redundant —
+but doing it manually gives you a *named* backup (e.g. `.bak.v6_...`) you
+can grep for later. Worth the one terminal call.
+
+### ⚠️ Memory tool 11-failure pattern — DON'T keep retrying
+
+The `memory` tool in cron context returns
+`{"error": "Memory is not available..."}` reliably on the first call.
+**Do not retry more than once** — observed v7 cron session 2026-06-07
+the tool returned the same error 11 times in a row when called in
+parallel. Wastes turns, no new info.
+
+```python
+# ❌ WRONG — wastes 11 turns on a guaranteed failure
+for content in insights:  # 11 entries
+    memory(action="add", target="user", content=content)
+
+# ✅ RIGHT — one try, then file fallback
+memory_attempted = False
+try:
+    memory(action="add", target="user", content=insights[0])
+    memory_attempted = True
+except Exception:
+    pass  # canonical file write is the source of truth
+
+# All 11 insights go to USER.md (v(n)) which is what the next session reads
+write_file(~/.hermes/memories/USER.md, full_v7_content)
+```
+
+**Document the fallback in the deliverable's落库状态 block** so the
+user knows the canonical file is up to date even though `memory` failed
+(see template in `references/cron-delivery-quirks.md` §"Memory tool —
+persistent unavailability").
+
+### ⚠️ GBrain "verify" step is frequently skipped in practice
+
+The Verification checklist has `gbrain search "<phrase>"` to confirm
+the new `user-profile-YYYYMMDD` slug is findable. **In 3 consecutive
+cron runs (v5/v6/v7 2026-06-05/06/07) this step was either skipped or
+incomplete** because the final response ran out of context or the
+session hit other constraints.
+
+**Minimum viable verification** (do these even if you skip the
+semantic-search round-trip):
+1. `terminal(command="wc -l ~/.hermes/memories/USER.md ~/.hermes/memories/user_model_report_YYYYMMDD.md ~/.hermes/memories/daily/YYYY-MM-DD-user-model-snapshot.md")` — confirm 3 files exist, all in KB range (not 0B)
+2. List the file sizes in the final report's落库状态 table — never claim "完成" without sizes
+3. If you DO have time/turns: `PATH="$HOME/.bun/bin:$PATH" gbrain search "<unique phrase from v(n) 增量>"` — top hit should be `user-profile-YYYYMMDD` with sim > 0.9
+
+The `scripts/verify-cron-writes.sh` helper handles step 1+2 in one call
+for batched writes (e.g. N wiki pages in one job). For the user-model
+specifically the 3-file list is fixed and one `wc -l` is enough.
 
 ### ⚠️ Search hits return truncated bookends
 
@@ -279,17 +348,29 @@ Inherited from `daily-work-log` pitfalls:
 more, scroll into specific sessions by id + message id, or read the
 session directly.
 
+**v7 lesson**: For high-traffic topics (e.g. "五莲", "工商联",
+"home assistant") the persisted-output trap fires on EVERY query —
+the 1500-char preview is the only thing that fits in context, and the
+`bookend_start` / `messages` arrays in the preview ARE the real
+content. Read them carefully rather than re-querying with narrower
+terms. A single broad OR-join query is often more useful than 3
+narrow ones for the same reason.
+
 ## Verification
 
 - [ ] 3 files exist with non-zero size: `USER.md`,
       `user_model_report_YYYYMMDD.md`,
       `daily/YYYY-MM-DD-user-model-snapshot.md` (sizes should be in the
       KB range, not 0B)
+- [ ] `wc -l` on the 3 files shows KB-range line counts (not 0)
 - [ ] GBrain `user-profile-YYYYMMDD` slug returns hits in semantic
       search (`gbrain search "<a unique phrase from the report>"`)
+      — **if skipped, document why in the落库状态 block** (out of
+      turns / context / time pressure), don't just silently drop it
 - [ ] `gbrain stats` shows total chunks grew by ~1 from the new slug
 - [ ] USER.md corrections count matches actual table row count
-- [ ] Previous USER.md version preserved (Hermes auto-backs up)
+- [ ] Previous USER.md version preserved (manual `.bak.v(n-1)_<ts>` or
+      Hermes auto-backup)
 - [ ] All v(n-1) corrections still present in v(n) — corrections are
       append-only, never deleted
 - [ ] Final response includes the full report (cron auto-delivers)
@@ -297,6 +378,8 @@ session directly.
       — see cron-success-hallucination pitfall above
 - [ ] For batched writes (e.g. N wiki pages), `scripts/verify-cron-writes.sh`
       exit code is 0 before declaring success
+- [ ] **If `execute_code` returned BLOCKED at any point, did not retry
+      beyond 1 attempt** — went to `terminal` + `python3 -c "..."`
 
 ## See also
 

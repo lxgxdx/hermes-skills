@@ -286,7 +286,33 @@ mkdir -p /tmp/gbrain-entities/<type>/<slug>
 3. **不要重跑 `dream-cycle-wiki-bridge.sh`** — 它会重新 staging 所有文件再次失败
 4. 单独 staging 该文件：`mkdir -p /tmp/gbrain-fix/<slug>; cp <fixed>.md /tmp/gbrain-fix/<slug>/page.md; bun run ~/gbrain/src/cli.ts import /tmp/gbrain-fix`
 5. 验证：`gbrain list | grep <slug>` 应有该页面
-- 实战：2026-06-03 dream cycle 修复 `policy-26-measures`（`title: "26条"惠台措施` → `title: 26条惠台措施`）
+- **实战**：2026-06-03 dream cycle 修复 `policy-26-measures`（`title: "26条"惠台措施` → `title: 26条惠台措施`）
+
+### ⚠️ `import` 对**内容已变更但 slug 相同**的页面静默跳过（2026-06-07 实测）
+
+**症状**：`gbrain import` 输出 `N pages skipped (N unchanged, 0 errors)`，但 staging 目录里的 `page.md` 与 brain 中已存在页面的**内容明显不同**（如 wiki 深化重写：65 行 → 295 行）。
+
+**根因**：`import` 的幂等性是基于 **slug + 内容哈希**判定"unchanged"，不是基于 mtime。如果 wiki 文件被**重写**（而非新增），import 会因为 path 一致认为"已存在"，跳过导入。
+
+**误判场景**：
+- ❌ "我刚改了 wiki 文件，重跑 import 应该会更新吧" — **不会**，会被跳过
+- ❌ "embed --stale 应该能补" — **不会**，embed 只补 stale chunks，不会重新 chunk 整个页面
+
+**正确更新已存在 wiki 页面的流程**：
+```bash
+# 1. 删 brain 中的旧页面
+~/.bun/bin/bun run ~/gbrain/src/cli.ts delete <slug>
+
+# 2. 重新 import staging 目录
+~/.bun/bin/bun run ~/gbrain/src/cli.ts import /tmp/gbrain-dream-YYYY-MM-DD
+
+# 3. 验证：get 内容行数/chunk 数增加
+~/.bun/bin/bun run ~/gbrain/src/cli.ts get <slug> | wc -l
+```
+
+**实战（2026-06-07）**：`policy-guangcai.md` 从 65 行/2.2KB 深化到 295 行/19.9KB，import 第一次输出 `0 pages imported, 3 pages skipped`；先 delete 再 import 成功 `1 pages imported, 2 pages skipped`（其余 2 个未变 slug 正常跳过）。
+
+**判定方法**：导入后看 `pages imported` 数 = staging 目录中**新 slug** 数。**已存在 slug 无论内容是否变更都被算入 skipped**，必须 delete 才能更新。
 
 
 # 2. 批量导入（自动创建 chunks，绕过安全扫描）
@@ -373,6 +399,18 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - Brain 页面写入：2个页面更新（pve-wiki.md、tongzhan-info-topics.md）
 - doctor：✅ health_score 90（resolver + connection warnings）
 - embed --stale：⚠️ embedding service 内网不可达（环境限制），0 chunks
+
+### Dream Cycle 执行状态（2026-06-07）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（与 6/2-6/6 连续 6 日一致）
+- **01:00 tongzhan-info-workflow cron 连续三日失败**（6/5、6/6、6/7）— 失败模式稳定可预测，但候选选题质量在提升（已能拆"宏观/子主题"避免与历史重复）
+- **01:30 tongzhan-wiki-build 突破"用例搜索瓶颈"** — 本次 P15 深化未卡在用例搜索阶段，优先写"问题+原文链接+核心案例"骨架（P15 中国光彩事业促进会章程 65→295 行 / 2.2→19.9KB）
+- wiki→brain 桥接：1 个更新实体（`entities/policy-guangcai/page`）+ 1 个新 raw + 1 个更新 project 页
+- **新增 pitfall**：`import` 对**已存在 slug**（即使内容已变更）会**静默跳过**，必须先 `delete` 再 `import` 强制更新
+- doctor：✅ health_score 85（与 6/2-6/6 稳定基线一致）
+- embed --stale：0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 104→108, chunks 203→217, embedded 203→217, project 17→17, entity 16→16, tags 109→110
+- 详细记录：`references/dream-cycle-2026-06-07.md`
 
 ### Dream Cycle 执行状态（2026-06-02）
 

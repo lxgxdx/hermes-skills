@@ -1,6 +1,6 @@
 # 跨日复现的 cron 任务已知 bug & 信号清单
 
-> 2026-06-04 首次整理，2026-06-05 大幅扩充（新增 §5b 成功幻觉 / §5c 前 N 步已规划但未落盘 / §10 dream cycle 0 净增正常信号）。这些 bug 每天会在 cron session 中重复出现，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
+> 2026-06-04 首次整理，2026-06-05 大幅扩充（新增 §5b 成功幻觉 / §5c 前 N 步已规划但未落盘 / §10 dream cycle 0 净增正常信号）。2026-06-06 新增 §5d cron 整段 SILENT 占位符（第三种截断模式）+ §11 01:00 问题类 cron 连续 2 日同类失败。每日 cron session 中都会重复出现这些 bug，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
 
 ## 🔴 高优先级（每日重复出现的 P0 信号）
 
@@ -8,7 +8,7 @@
 
 - **症状**：所有 cron 任务完成后向飞书回报时返回 `19001 access token invalid`
 - **首次发现**：2026-06-02（48+ 小时）
-- **2026-06-05 状态**：96+ 小时持续失效
+- **2026-06-06 状态**：100+ 小时持续失效
 - **影响**：所有 cron 任务的用户通知全部丢失；用户只能通过每日 00:00 的 daily-work-log cron session 间接看到结果
 - **应对**：daily log 必须在「未完成 / 待跟进」顶部列出此条；连续多日需要在「未完成」开头用 `🔴 **飞书 webhook 持续失效 XX 小时**` 突出显示
 - **修复路径**（需用户操作，不在 cron 范围内）：重新走飞书开放平台授权流程，更新 webhook token 到 `~/.hermes/config.yaml` 或 `.env`
@@ -47,7 +47,7 @@
 
 - **症状**：dream cycle 报"今日 Wiki +N pages"，但实际 cron session 只新建 M 个页面（M < N）
 - **首次发现**：2026-06-03（14 vs 1）
-- **2026-06-04 状态**：99→99 pages（与 06-03 报"96→94"累计增长混淆）；实际 06-04 新建 1 policy + 4 PVE concept = 5 wiki 页
+- **2026-06-06 状态**：连续 4 日存在
 - **根因**：`dream-cycle-wiki-bridge.sh` 累计读 `~/wiki/log.md` 近期行（含跨日增量），把"近期 wiki 增长"误算为"今日 wiki 增长"
 - **应对**：
   1. daily log 已在「未完成 / 待跟进」列出"复查 `dream-cycle-wiki-bridge.sh` 累计逻辑"
@@ -69,6 +69,7 @@
   - 汇报"已创建 4 个核心页面：proxmox-ve-install.md / gpu-passthrough.md / frigate-on-pve.md / pve-network-storage.md"
   - 实际 `~/wiki/concepts/` 下 4 文件**均不存在**
   - GBrain 搜索 "Proxmox VE 安装" / "GPU 直通" / "Frigate PVE" → 全部无相关 chunk
+- **2026-06-06 状态**：连续 2 日同类（同一 cron session id 6/6 仍为 `0abf80bf4d68`，沿用 6/5 失败模式）
 - **根因猜测**：agent 在 `write_file` 工具调用失败 / 超时 / context 截断前已经按"假设成功"路径生成汇报段
 - **应对**（daily log 必做的 3 件事）：
   1. **强制 stat 验证**：对每个 cron session 汇报的关键文件路径，run `ls -la <path> 2>&1` 检查文件存在 + 大小 > 1KB
@@ -89,11 +90,40 @@
   - asst[10] 列出 5 个选题组合（2 类型 A 台湾 + 3 类型 B 制度漏洞）
   - asst[14] 确认排重完成
   - `问题类选题_20260605.md` **未生成**
+- **2026-06-06 状态**：**连续 2 日同类失败**（同一 cron 任务 `68a578b26b`，6/5 与 6/6 均为 asst last < 200 chars）
+  - 6/6 asst[4]：读完 6/03-6/04 + 6/05 经验类（共 24 个本地选题）建立排重库
+  - 6/6 asst[24]：建立 Wiki 政策富矿 A-E 五组（台湾投资保护法/互联网宗教/宗教活动场所/宗教教职人员/民族团结促进法）
+  - 6/6 asst[25]：抓到观察者网 6/6 头条"五眼联盟"新角度
+  - 6/6 asst last = 116 chars（在"打开文章详情"阶段截断，**未生成 `问题类选题_20260606.md`**）
 - **与"未开始"区别**：未开始 = asst 全短过渡句；此模式 = asst 中段已经做了 80% 工作
 - **应对**：
   1. 检测到 asst last = 0 + 期望输出文件不存在 → 标 `⚠️ 任务疑似中断（已完成 80%，缺落盘）`
   2. 建议 fallback：用 `delegate_task` 把"把 asst[10] 选题组合写入文件"作为单步任务派发
-  3. 长期：tongzhan-info-workflow skill 的"落盘 step"应拆为独立 sub-step，便于失败重试
+  3. **连续 2 日同 bug**：必须在「未完成」加 `❌ 01:00 问题类 cron 连续 2 日同类失败`（升 P0）
+  4. 长期：tongzhan-info-workflow skill 的"落盘 step"应拆为独立 sub-step，便于失败重试
+  5. **可复用素材**：6/6 asst[24] 已建立完整的 A-E 政策富矿分析 + 6/6 asst[25] 已抓取观察者网 6/6 头条"五眼联盟"——6/7 01:00 cron 可**跳过 wiki 挖掘和新闻抓取阶段**，直接用这些留底素材写文件
+
+### 5d. cron session 整段只返回字面量 `[SILENT]`（第三种截断模式，2026-06-06 新发现）
+
+- **症状**：cron session 最后一条 asst 内容是字面字符串 `[SILENT]`（长度仅 8），没有 skill 注入后的过渡句、没有失败原因、没有完成报告。是**第三种截断模式**，与已知的"空字符串截断"和"成功幻觉"都不同
+- **首次批量发现**：2026-06-06 三个 cron session 同时中招：
+  - `cron_0abf80bf4d68_20260606_020012`（llm-wiki-build，PVE wiki 概念页）—— 12 msgs / asst last = `[SILENT]`
+  - `cron_8670107d659c_20260606_200008`（home-assistant-ops）—— 5 msgs / asst last = `[SILENT]`
+  - `cron_e08019f497a1_20260606_210022`（check-wechat-issue）—— 4 msgs / asst last = `[SILENT]`
+- **与"空字符串截断"区别**：`asst last = ''`（len=0）通常出现在 agent 进入死循环后被截断；`[SILENT]` 字符串是 agent 显式决定的"我没什么可汇报的"信号
+- **与"成功幻觉"区别**：成功幻觉 = asst last 长且结构化（看着像真完成）；`[SILENT]` = asst last 极短（看着像真没做事）
+- **根因猜测**（待 6/7 02:00 验证）：
+  1. skill 注入型 user 消息（10k+ 字符）让 agent 推断"任务已由其他 cron 接管 / 我没新增信息可报"
+  2. skill 模板本身要求 agent 在无新产出时回 SILENT（**应改**：让 agent 至少回"已检查，无变更"再正常退出）
+  3. cron 容器在 PVE/HA 操作的硬限流（但本日 3 个任务类型完全不同，不像是限流）
+- **检测**：`last_len == 8 and content.strip() == '[SILENT]'` 一行精确匹配；老的 `< 100` 阈值已能 catch 但有 FP（首条短过渡句也可能 < 100）
+- **应对**：
+  1. **读 skill 全文**确认该 cron job 是不是"应该静默的守护型任务"（如 gbrain doctor / skills sync 的二次校验）
+  2. **非守护型任务 + SILENT** → 视为"任务未执行"，在「未完成 / 待跟进」标 `❌ cron SILENT（未执行）`
+  3. **跨日累计同类**：6/6 已有 3 个 SILENT cron，6/7 02:00 cron 必须**复跑这 3 个任务**
+  4. **SILENT 占位符消歧**：建议在 cron 模板里把 `[SILENT]` 改为 `[NOOP_NO_CHANGES]` 或 `[CHECKED_NO_UPDATES]`，让 daily log 能区分"agent 静默退出"和"agent 没在工作"
+- **为什么重要**：今天 1 飞书 + 11 cron 的"混合日 lite"模式下，3 个 SILENT cron 占据了 25% 的 cron 任务量；如果不显式标注，整日 cron 产出统计严重虚高
+- **SILENT vs 成功幻觉 共性**：两者都是 agent **最终没真正做事**的信号，但一个是"汇报假完成"（长报告），一个是"汇报假无事"（极短占位符）。daily log 必须对这两种都做交叉验证
 
 ## 🟢 低优先级（一次性的脚本/格式观察）
 
@@ -115,6 +145,20 @@
 - **真实情况**：0 imported 是因为今日唯一新建（01:30 P17）已被 0130 cron 同步到 GBrain；dream cycle 在 02:00 跑时 P17 已存在；"小幅增长"主要来自日志追加和 tongzhan-info-topics 累计更新（不是新建）
 - **应对**：dream cycle 报告里 `pages/chunks` 净增数 + `imported=0` 看似矛盾但**不需要 follow-up**；只有当 dream cycle 报 `imported > 0` 但 filesystem 找不到对应文件时，才触发"成功幻觉"检查
 
+### 11. "混合日 lite" 1 飞书 + 11 cron 处理模式（2026-06-06 新发现）
+
+- **症状**：1 飞书 + 11 cron + 0 微信/TG/cli，介于"全 cron 日"和"混合日"之间
+- **与 6/4 混合日（2 飞书 + 11 cron = 13）区别**：6/4 飞书是大 session（213 msgs 含 3 子任务），6/6 飞书是小 session（19 msgs 单主题）
+- **应对**：
+  1. **首行标注比例**（`1 飞书 / 11 cron / 0 微信/TG/cli`）便于回看区分
+  2. **飞书 session 处理**：用 §混合日 asst 头/中/尾三段式读取（如 RuView session asst[2]/asst[8]/asst[10]），但 6/6 飞书只有 19 msgs，单条汇报也够用
+  3. **cron 任务归类**：
+     - **00:00 daily-work-log** —— "昨日日报落库"
+     - **01:00 + 01:30 + 02:00×4 + 03:00 + 06:00** —— 7 个标准时段（信息稿/Wiki/备份/Skill 同步）
+     - **20:00 + 21:00** —— 6/6 全部 SILENT（§5d）
+  4. **"未完成"块必须包含 cron 横切观察**（如今天 3 个 SILENT cron + 01:00 连续 2 日失败 + 02:00 PVE wiki 连续 2 日成功幻觉）
+- **为什么重要**：1 飞书 + 11 cron 是 cron 流量高的日常工作日；不像"全 cron 日"是异常天，需要 daily log 给出 cron 健康度评分（今日 3/12 = 25% 失败率）
+
 ## 跨日 follow-up 模板
 
 每日 daily log 中如果检测到以上任一 P0 信号，必须用以下格式突出显示：
@@ -124,10 +168,13 @@
 
 - 🔴 **飞书 webhook 持续失效 XX 小时** — 错误码 19001 token 无效，所有 cron 通知丢失，需重新授权（P0）
 - 🔴 **GitHub PAT 视为已泄露** — `~/.hermes/skills/.archive/github-pat-retrieval/` 含真实 PAT，建议立即 revoke
+- 🔴 **01:00 问题类 cron 连续 2 日同类失败**（2026-06-05 → 2026-06-06）— 同 session id `68a578b26b` 同一根因；建议 6/7 用 `delegate_task` 单步重跑 or 跳过 wiki 挖掘直接用 6/6 留底素材
 - **hermes-backup.sh 日志写入** — 需加 `exec >> "$LOG_FILE" 2>&1`
 - **dream-cycle 累计逻辑 bug** — 报"pages +N"与实际新建不符（与 YYYY-MM-DD 同一类）
+- **cron 健康度** — 今日 3/12 = 25% cron 失败率（3 SILENT + 0 中断 + 0 成功幻觉），详见 §5d
 - ⚠️ **成功幻觉（YYYY-MM-DD）** — <cron session id> 汇报"已完成 X/Y/Z" 但 filesystem + GBrain 双重验证无文件，需重跑 / 加 stat 强制校验
 - ⚠️ **任务疑似中断（已完成 80%，缺落盘）** — <cron session id> asst last=0 但中段已规划完成，建议 `delegate_task` 单步重跑落盘
+- ❌ **cron SILENT（未执行）**（2026-06-06 新增）— <cron session id> asst last = `[SILENT]`（8 字符），属第三种截断模式，需 6/7 02:00 cron 复跑
 ```
 
 其中 XX 小时是"自首次发现"累计时长；连续多日要在 daily log 顶部用 `⚠️ P0 跨日持续` 标注。
