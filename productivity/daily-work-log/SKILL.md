@@ -256,6 +256,7 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 - [ ] 已用 `gbrain search <关键词>` 反向验证落库成功（相似度 >0.9）
 - [ ] **【新】对 cron session 汇报的"已创建/已完成"文件，强制 stat 验证 + GBrain 跨源验证**（避免成功幻觉）
 - [ ] **【新】检测每个 cron session asst last 是否是字面量 `[SILENT]`**（8 字符），非守护型任务视为未执行
+- [ ] **【新】检测 asst last 是否是"半截过渡句"** —— 匹配 `现在写文件` / `Let me write` / `现在准备Searxng` / `Now let me` + 工具调用 `write_file=0` → 视为"未落盘"中断（§11b 第四种截断模式，2026-06-07 双 cron 同期首现）
 - [ ] 告知用户 slug 名称
 
 ## ⚠️ Context 控制（cron 环境必修）

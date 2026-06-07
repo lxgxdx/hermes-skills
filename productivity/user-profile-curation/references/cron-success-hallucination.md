@@ -158,5 +158,19 @@ bash ~/.hermes/skills/productivity/user-profile-curation/scripts/verify-cron-wri
 | 2026-06-05 | llm-wiki-build (PVE) | 4 页面未真实写入 | "已创建 4 个核心页面" | 文件均不存在 |
 | 2026-06-05 | tongzhan-info-workflow (问题类) | write_file 之前中断 | asst last 0 chars | `问题类选题_20260605.md` 未生成 |
 | 2026-06-03 | dream-cycle (累计统计) | 读了 log.md 累计行 | "Wiki 14 个新页面" | 实际只新增 1 个 |
+| 2026-06-06 | user-profile-curation (v6) | PVE Wiki 4 页面 6/5 02:00 cron 任务汇报"4 页面已建" | "已建" | 实际未写入 |
+| 2026-06-07 | tongzhan-info-workflow (问题类) | cron 时间窗不足 | asst last 0 chars | `问题类选题_20260607.md` 未生成（第 3 日失败） |
 
-*更新日期：2026-06-06 / 触发会话：cron_2f03227164de_20260606_020040 (user-profile-curation v6)*
+## v8 验证（2026-06-08 防御生效记录）
+
+| 日期 | skill | 任务 | 防御措施 | 实际结果 |
+|------|-------|------|---------|---------|
+| 2026-06-08 | tongzhan-info-workflow (01:00) | 5 选题 / 26.6KB / 134 行 | 拆分时间窗 + 完整 stat 验证 | ✅ 5 选题完整落盘（4 日失败破冰） |
+| 2026-06-08 | tongzhan-wiki-policy-builder (01:30) | P05 深化 + comparisons/ 首发 | 多文件 stat + 提纲状态更新 | ✅ 21.3KB + 11.3KB + 4 文件协同更新 |
+| 2026-06-08 | user-profile-curation (02:00) | USER.md v8 / 18.4KB | `wc -c` 三件套 + 备份命名 | ✅ 18,460B / 18,460B / 1,898B + `.bak.v7_1780855293` 17,239B |
+
+**关键观察**：v8 是首次**所有 cron 写盘任务都成功通过 stat 验证**的工作日。
+前一周（6/1-6/7）累计 5+ 次成功幻觉失败，v8 单日 0 次。说明三层防御
+（write_file 后 stat + 落库状态表精确字节 + 拆分时间窗）已形成有效的防线。
+
+*更新日期：2026-06-08 / 触发会话：cron_*_20260608_02* (user-profile-curation v8)*

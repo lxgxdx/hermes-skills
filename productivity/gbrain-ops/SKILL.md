@@ -280,6 +280,22 @@ mkdir -p /tmp/gbrain-entities/<type>/<slug>
 - 正确做法：去掉内嵌引号改为 `title: 31条惠台措施`，或外套双引号、内嵌单引号
 - 详见 `references/gbrain-yaml-pitfalls-2026-05-31.md`
 
+**⚠️ YAML `[[slug]]` wiki-link 陷阱（2026-06-08 新增）：**
+- 在 `sources:` 等 list 字段中放 `[[policy-taiwan-investment]]` 会触发 `bad indentation of a sequence entry` 错误
+- YAML block-collection parser 把 `[[` 当作 flow-style sequence 起始，破坏 block scalar 解释
+- 修复：frontmatter 中去掉 `[[` 和 `]]`（wiki 链接应放 body 而非 YAML），或 sed 替换后再 import
+- **Pre-flight check**: import 前用 `python3 -c "import yaml; yaml.safe_load(open('page.md').read().split('---', 2)[1])"` 验证
+- 实战：2026-06-08 `entities/problem-case-taiwan-qualification-barriers` 首 import 失败，strip 后 reimport 成功
+
+**⚠️ comparisons/ 目录扫描（2026-06-08 新增）：**
+- wiki bridge 现在除了 `~/wiki/entities/*.md` 还要扫 `~/wiki/comparisons/*.md`
+- comparisons/ 页面用 `type: comparison` 而非 `type: entity`，会被算入 `comparison` 桶而非 `entity` 桶
+- 如果想让对比案例页归到 entity 桶，frontmatter 写 `type: entity`
+
+**📝 outline/index/log 文件不要 import：**
+- `~/wiki/tongzhan-work-outline.md`、`~/wiki/index.md`、`~/wiki/log.md` 是结构性元数据，不是实体内容
+- dream cycle 只 import `entities/` 和 `comparisons/` 目录下的页面
+
 **⚠️ 当 `import` 静默跳过文件时**：运行 `gbrain import <dir>` 输出 `Warning: skipped ... can not read a block mapping entry; a multiline key may not be an implicit key` → YAML 解析失败。**恢复步骤**：
 1. 用 `python3 -c "import yaml; yaml.safe_load(open('page.md').read().split('---', 2)[1])"` 定位错误行
 2. 修复 frontmatter（通常是嵌套引号、未闭合字符串、列表缩进错误）
@@ -288,7 +304,7 @@ mkdir -p /tmp/gbrain-entities/<type>/<slug>
 5. 验证：`gbrain list | grep <slug>` 应有该页面
 - **实战**：2026-06-03 dream cycle 修复 `policy-26-measures`（`title: "26条"惠台措施` → `title: 26条惠台措施`）
 
-### ⚠️ `import` 对**内容已变更但 slug 相同**的页面静默跳过（2026-06-07 实测）
+**⚠️ `import` 对**内容已变更但 slug 相同**的页面静默跳过（2026-06-07 实测）**
 
 **症状**：`gbrain import` 输出 `N pages skipped (N unchanged, 0 errors)`，但 staging 目录里的 `page.md` 与 brain 中已存在页面的**内容明显不同**（如 wiki 深化重写：65 行 → 295 行）。
 
@@ -350,9 +366,17 @@ mkdir -p /tmp/gbrain-entities/<type>/<slug>
 
 脚本逻辑：
 1. `find ~/wiki/entities -mtime -N` 找到最近修改的 wiki 页面
-2. `gbrain list --limit 500` 拿到所有 DB slug，对比哪个 wiki 页不在 DB
-3. 缺失的页面 staging 到 `/tmp/gbrain-dream-YYYY-MM-DD/entities/<slug>/page.md`
-4. `gbrain import` 批量导入（`import` 幂等，已存在会跳过）
+2. **（2026-06-08 扩展）** 同样扫描 `~/wiki/comparisons/` 目录
+3. `gbrain list --limit 500` 拿到所有 DB slug，对比哪个 wiki 页不在 DB
+4. 缺失的页面 staging 到 `/tmp/gbrain-dream-YYYY-MM-DD/<type>/<slug>/page.md`
+5. `gbrain import` 批量导入（`import` 幂等，已存在会跳过）
+
+**跳过不 import 的文件**：
+- `~/wiki/tongzhan-work-outline.md` — 提纲
+- `~/wiki/index.md` — 总索引
+- `~/wiki/log.md` — 建设日志
+
+这些是结构性元数据，不应进入 brain 向量库。
 
 **手动流程**（如果不想跑脚本）：
 
@@ -399,6 +423,22 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - Brain 页面写入：2个页面更新（pve-wiki.md、tongzhan-info-topics.md）
 - doctor：✅ health_score 90（resolver + connection warnings）
 - embed --stale：⚠️ embedding service 内网不可达（环境限制），0 chunks
+
+### Dream Cycle 执行状态（2026-06-08）
+
+- 实体提取：7 个 cron session，3 个含实际内容；**全 cron 日，无人类对话**（连续第 7 日）
+- **01:00 tongzhan-info-workflow cron 结束连续 3 日失败模式**（6/5+6/6+6/7）— 简化策略（跳过 wiki 挖掘、限制浏览器操作、优先写 NFS）奏效，今日成功生成 5 个选题（2 热点 + 3 制度漏洞），**首次启用"类型 B 制度漏洞"分类**
+- **01:30 tongzhan-wiki-build P05 案例深化 + comparisons/ 首发** — `policy-taiwan-investment` 17.7KB→21.3KB（+案例3泰州），新建 `problem-case-taiwan-qualification-barriers`（comparisons/ 第一个页面，11.3KB）
+- wiki→brain 桥接：2 个页面（1 改写 + 1 新建），**新增 YAML `[[slug]]` 陷阱发现**
+- Project 页面更新：`projects/tongzhan-info-topics` 追加 6/8 执行状态段（5 选题速览）
+- doctor：✅ health_score 85（与 6/2-6/7 稳定基线一致）
+- embed --stale：110/110 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 108→110 (+2), chunks 217→223 (+6), embedded 217→223, **comparison 0→1**（新 type 桶）, tags 110→114
+- 关键认知：
+  - YAML frontmatter 中 `[[wiki-link]]` 在 list 字段内会触发 `bad indentation` 错误，必须 strip
+  - comparisons/ 目录现在是 wiki bridge 第二扫描目标（除 entities/ 外）
+  - outline/index/log 文件不应 import（结构性元数据）
+- 详细记录：`references/dream-cycle-2026-06-08.md`
 
 ### Dream Cycle 执行状态（2026-06-07）
 
@@ -1085,6 +1125,8 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `gbrain get <slug>` 短名找不到 | 完整 slug 含 `/page` 后缀（如 `projects/foo/page`） | 始终用 `gbrain list` 拿完整 slug 后再 get |
 | 02:00 cron slot 同时触发 4 个 session | 3 个 0 消息守卫 + 1 个 llm-wiki-build 检查 | 按 `message_count > 0` 过滤即可，0 消息 session 是占位 |
 | `doctor --json` 显示 resolver_health/pgvector/RLS warnings | doctor 的某些检查项在 cron 环境路径解析有 bug | 不影响真实功能；用 `gbrain stats` 验证实际连接 |
+| YAML `[[wiki-link]]` 在 frontmatter list 字段中触发 import 错误（2026-06-08）| YAML block-collection parser 把 `[[` 当作 flow sequence 起始 | strip `[[`/`]]` 后再 import；pre-flight 用 `yaml.safe_load(fm)` 验证；详见 `references/gbrain-yaml-pitfalls-2026-05-31.md` Pitfall #2 |
+| wiki bridge 漏掉 `~/wiki/comparisons/` 目录（2026-06-08）| bridge 脚本只扫 `entities/` | bridge 逻辑要同时扫 `comparisons/`，comparisons 页面用 `type: comparison` |
 
 ---
 

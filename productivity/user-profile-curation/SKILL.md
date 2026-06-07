@@ -356,6 +356,91 @@ content. Read them carefully rather than re-querying with narrower
 terms. A single broad OR-join query is often more useful than 3
 narrow ones for the same reason.
 
+### ⚠️ "Consecutive-cron-day" ceiling — agent runs on autopilot ~7 days max
+
+v8 (2026-06-08) observed **7 consecutive cron-only days** (6/2 → 6/8)
+with zero human interaction across any platform (feishu/weixin/tg/cli).
+The user was not in the loop, but cron tasks self-advanced all 5 work
+lines (信息稿 / PPT / 部务会 / 公文 / Wiki). Past data showed 4-5 days
+as the prior ceiling.
+
+**Implications for the profile**:
+- After ~7 days of pure cron, **expect a human check-in** (the user
+  probably wants to see what's been produced)
+- The profile's "**v(n) 增量**" section should explicitly call out the
+  consecutive-cron-day count so the user sees the cumulative work
+- When the next user-initiated session arrives, lead with a "here's
+  what cron did in your absence" summary — don't assume the user has
+  seen the daily auto-reports
+- This pairs with the "飞书 webhook 19001 错误" issue (v8 168+ hours):
+  the user may not have actually received any of the cron reports for
+  the past week
+
+### ✅ Validated pattern: cron time-window splitting (v7 → v8 confirmed)
+
+The `tongzhan-info-workflow` skill was failing 3-4 days in a row
+because a single cron invocation tried to do both 选题 selection (heavy
+read_file + browser + tool_calls) AND topic logging (write_file) within
+~72 message budget. **v7 proposed splitting into two adjacent cron
+slots (01:00 + 01:30) and v8 confirmed the strategy works**: 6/8 01:00
+cron alone used 70 messages but successfully landed 5 topics / 26.6KB
+without the 0-char-asst failure mode.
+
+**Generic cron-skill design rule**: when a cron task repeatedly fails
+with `asst last message = 0 chars` or "success hallucination" but
+content was actually designed, the fix is **NOT** to add more tooling —
+it's to **split into adjacent cron slots** so each slot has full budget
+to actually `write_file` before context fills up.
+
+**Anti-pattern to avoid**: don't merge 选题 + 写作 + 校对 + 落盘 into
+one cron task just because the workflow looks "logically connected".
+The 72-message budget is the hard constraint, not the workflow graph.
+
+### ✅ Validated pattern: "Wiki 政策库 → cron 选题" reverse loop (v8 6/8)
+
+The user designed (and 6/8 01:00 cron actually executed) a **bidirectional
+loop** between the Wiki knowledge base and the cron 选题 generator:
+
+```
+Wiki 政策页 (e.g. policy-taiwan-investment.md)
+  ↓ 执行层面问题标注 + 案例库
+cron 01:00 读 ~/wiki/entities/policy-*.md
+  ↓ 反向挖制度漏洞
+类型B 制度漏洞选题 (3 个全新富矿)
+  ↓ 用户选定后起草
+信息稿 → 电脑校对 → 终稿
+  ↓ 新案例 / 新制度问题
+回到 Wiki 政策页 (深化 + 新案例) OR 新建 comparisons/ 子页
+```
+
+**Key insight**: the user has explicitly built this loop. The Wiki
+isn't just a passive reference — it's the 选题 generator's "ore body".
+
+**Profile-curation implication**: when v(n) reports Wiki progress,
+report it AS the input to the next 选题 cron run, not as standalone
+"知识沉淀" progress. The two are now one workflow.
+
+### ✅ Workflow pattern: report file sizes in 落库状态 block (v8 confirmed)
+
+After writing the 3 user-model files, the v8 report included:
+
+```markdown
+| **用户模型主文件** | `~/.hermes/memories/USER.md` | v8 主报告（覆盖 v7） | **18,460B** ✅ |
+| **v7 备份** | `~/.hermes/memories/USER.md.bak.v7_1780855293` | v7 完整备份 | 17,239B ✅ |
+| **周期化归档** | `~/.hermes/memories/user_model_report_20260608.md` | 54 天数据快照 | **18,460B** ✅ |
+| **每日精简版** | `~/.hermes/memories/daily/2026-06-08-user-model-snapshot.md` | GBrain 同步版 | **1,898B** ✅ |
+```
+
+This is the **canonical "I really wrote the files"** signal. The
+combination of:
+1. Running `wc -c` on all 3 files before declaring success
+2. Listing exact byte sizes (not "完成" or "已落盘")
+3. Tying the size to the v(n) number (v8 = 18,460B) so a future v(n+1)
+   can immediately spot if size shrank unexpectedly
+
+…is what distinguishes a "real" 落库 from a "成功幻觉" 落库. Copy this
+table pattern verbatim into every v(n) report's 落库状态 block.
+
 ## Verification
 
 - [ ] 3 files exist with non-zero size: `USER.md`,
@@ -387,6 +472,9 @@ narrow ones for the same reason.
   the same cron-mode constraints (memory tool unavailable, heredoc
   blocked, no sqlite3 CLI, etc.). Read its pitfalls section for
   cross-reference on cron environment quirks.
+- `tongzhan-info-workflow` — benefits from the **"cron time-window
+  splitting"** validated pattern (Pitfall: ✅ Validated pattern section)
+  if its 01:00 + 02:00 cron tasks are merged or grow
 - `references/v4-template.md` — full v4 report structure with
   section-by-section authoring notes for v5+ updates
 - `references/cron-delivery-quirks.md` — deeper notes on memory tool
@@ -397,5 +485,9 @@ narrow ones for the same reason.
 - `references/cron-success-hallucination.md` — **cron task "成功幻觉"
   failure pattern + 3-layer defense**; relevant for any write-bearing
   cron skill (wiki builder, info workflow, etc.), not just this one
+- `references/cron-v8-validations.md` — **v8 (2026-06-08) validated
+  patterns**: time-window splitting worked, Wiki→cron reverse loop
+  executed, 7-day-cron ceiling observed, file-size table discipline
+  standardized. Read this BEFORE designing a new cron skill.
 - `scripts/verify-cron-writes.sh` — bash helper that checks N paths
   exist and are >= 1KB. Use as the last step of any cron write task.

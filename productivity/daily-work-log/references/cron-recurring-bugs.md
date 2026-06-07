@@ -145,6 +145,28 @@
 - **真实情况**：0 imported 是因为今日唯一新建（01:30 P17）已被 0130 cron 同步到 GBrain；dream cycle 在 02:00 跑时 P17 已存在；"小幅增长"主要来自日志追加和 tongzhan-info-topics 累计更新（不是新建）
 - **应对**：dream cycle 报告里 `pages/chunks` 净增数 + `imported=0` 看似矛盾但**不需要 follow-up**；只有当 dream cycle 报 `imported > 0` 但 filesystem 找不到对应文件时，才触发"成功幻觉"检查
 
+### 11b. "asst last = '现在写文件 / 先准备 Searxng 搜索'" 第四种截断模式（2026-06-07 新发现）
+
+- **症状**：cron session 最后一条 asst 是**一句过渡句**（非结构化报告，也非空串、非 `[SILENT]`），形如 `现在写文件。先准备Searxng搜索作为辅助：` 或 `Let me write the output file now:`，**工具调用统计为 0 个 `write_file` / 0 个 `gbrain put`**
+- **首次发现**：2026-06-07 **双 cron 同期触发**：
+  - `cron_68a578b26b6c_20260607_010057`（01:00 问题类选题）—— 72 msgs / asst[26] = 995 chars，最后一句 = "Let me write the output file now:" → `问题类选题_20260607.md` **未生成**
+  - `cron_59f917bbc534_20260607_020055`（02:00 经验类选题）—— 102 msgs / asst[42] = 3094 chars，最后一句 = "现在写文件。先准备Searxng搜索作为辅助：" → `经验类选题_20260607.md` **未生成**
+- **与 §5b 成功幻觉区别**：成功幻觉 = asst last **长且结构化**（含文件名 + 路径 + 大小 + 下一步），看着像真完成；此模式 = asst last **中长 + 半截过渡句**，"意图表达"完成但**实际写盘动作未执行**
+- **与 §5c 80% 已完成未落盘区别**：§5c = asst last = 0（被截断在某个工具调用后）；此模式 = asst last ≠ 0，但**写盘动作在 asst 之后从未发生**
+- **与 §5d `[SILENT]` 占位符区别**：`[SILENT]` = 8 字符整段占位符；此模式 = asst last 通常 800-3100 字符，最后一句是"半截"动作意图
+- **根因（确认）**：info-workflow cron 内部 `read_file` + `terminal` 调用密集（72-102 条消息），agent 在"设计阶段"把 asst last 用尽了；cron 时间窗到点，asst last 已落定但**真正的 `write_file` 工具调用还没排到执行队列**
+- **检测三件套**（每日 cron 必做）：
+  1. **asst last 文本扫描**：匹配 `现在写文件` / `Let me write` / `现在准备Searxng` / `Let me search` / `准备Searxng` / `Now let me` 等"动作意图未执行"短语
+  2. **工具调用统计**：扫 cron session 的 `tool_name COUNT(*)` —— 任何"应当 write_file"的 cron 任务如果 `write_file = 0` 立即标 `❌ 任务疑似中断（asst 走到"现在写文件"前）`
+  3. **filesystem stat**：直接 `ls -la <expected_output_path>` —— 文件不存在 = 确认
+- **应对**：
+  1. 在「未完成 / 待跟进」标 `❌ asst-走-到-现在-写文件-前中断（YYYY-MM-DD 新发现）`
+  2. **双 cron 同期触发**是**根因再确认**：01:00 + 02:00 信息稿 cron 6/7 首次同根因失败 = cron 时间窗 ~72-102 条消息对 info-workflow 全流程（设计 + 抓取 + 排重 + 落盘）来说**结构性不足**
+  3. **6/8 cron 强烈建议**：拆分信息稿 cron（01:00 选题设计 → 01:30 案例补全 → 02:00 经验类）让每段都 < 70 条消息；或加"候选留底机制"（asst[26] 候选组合先存 `~/wiki/raw/选题候选_YYYY-MM-DD.md` 再继续）
+  4. **可复用素材**：6/7 asst[26] 1 类型A + 4 类型B 选题组合已通过排重，6/8 01:00 cron 可**直接复用 asst[26] 内容**写文件，跳过设计阶段
+- **为什么重要**：6/7 是 6/5 + 6/6 失败模式的**同根因第 3 日**，但**扩散到第二个 cron 任务**（01:00 + 02:00 信息稿双失败）。如果继续按 §5c 模板只标"01:00 cron 失败"，会漏掉 02:00 cron 的同类失败
+- **PVE llm-wiki-build 反例**（6/7 同期对比）：同 02:00 时段 `cron_0abf80bf4d68_20260607_020056`（24 msgs / 1 patch）→ **健康完成**。区别：PVE cron 是"健康检查"任务（4 个现有页面状态确认 + log.md 追加），1 patch 就够；信息稿 cron 是"设计+抓取+写盘"复合任务，cron 消息预算根本不够。**判断 cron 任务是否走"半截过渡句"模式前，先看该 cron 的标准耗时与任务复杂度**
+
 ### 11. "混合日 lite" 1 飞书 + 11 cron 处理模式（2026-06-06 新发现）
 
 - **症状**：1 飞书 + 11 cron + 0 微信/TG/cli，介于"全 cron 日"和"混合日"之间

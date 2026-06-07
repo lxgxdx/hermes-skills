@@ -46,6 +46,39 @@ P01-P17 全部"✅ 已建"后，**不要谎报"无新政策可建"**。最浅页
   - 更新 `created` / `updated` 字段，更新 `log.md` 标注为"update | 深化"
 - **实际案例**：2026-06-07 cron 任务——P15 政策页仅 65 行 2.2KB，优先列表其他项都已建，选择深化 P15（章程 8 章 51 条 + 6 条案例 + 5 类问题），扩至 295 行 8.8KB
 
+### ⚠️ "全建+全深化"后的第三档应对——扩展到制度问题案例库（2026-06-08 新发现）
+
+P01-P17 全部已建**且**每个政策页都已 ≥3 条真实执行案例**且**每个政策页都 ≥8.8KB 之后，"深化政策页"也用尽时，**不要谎报"无新内容可建"**：
+
+- **目标切换**：从 `entities/policy-*.md` 切换到 `comparisons/problem-case-*.md`
+- **判断依据**：
+  - `ls ~/wiki/comparisons/` 为空 → 制度问题案例库从未建过
+  - 提纲第 2.3 节列了 5 个"⚠️待开发"主题方向 → 选 1 个
+- **建设流程**（与 policy-xxx.md 不同的关键点）：
+  - 选题必须基于**已建政策页中的制度漏洞点**，是"自下而上"的二次研究
+  - 字段格式不同：frontmatter `type: comparison`、`tags: [problem-case, 领域, 制度漏洞]`
+  - 章节结构不同（见 `references/problem-case-library.md`）
+  - **必须给出"五莲县级工作建议"小节**——这是制度问题案例库与政策页的核心区别
+- **额外 sync 路径**：除了 index.md / log.md / tongzhan-work-outline.md，还需更新提纲 2.3 节"主题方向"列表（待开发→已建设）
+- **真实案例**：2026-06-08 cron 任务——所有 P01-P17 都已建+深化过，新建 `comparisons/problem-case-taiwan-qualification-barriers.md`（基于 2026-05 下半月 5 篇国台办地方动态识别 6 个制度漏洞点+6 条建议+3 条县级建议）
+
+### ⚠️ 提纲状态"假性待建设"的反复出现（2026-06-08 新发现）
+
+历史已记录的"提纲状态滞后"问题（2026-06-07 P15）**会反复出现**——今天 P05 也遇到：
+- 提纲 2.1 节 P05 标记"待建设"
+- 实际 `entities/policy-taiwan-investment.md` 已建于 2026-06-04（261 行 17.7KB）
+- **提纲的状态列与实际文件状态可能错位 4-30 天**
+
+**强化工作流**（升级原"⚠️ 最重要的陷阱"小节）：
+- 选政策时**必须**双重验证：
+  ```bash
+  ls -la ~/wiki/entities/policy-*.md  # 实际文件
+  grep -E "^\| P[0-9]+" ~/wiki/tongzhan-work-outline.md  # 提纲状态
+  ```
+- 若提纲"待建设"但文件已存在 → **该政策是"深化"候选**而非"待建"候选
+- 若提纲"✅ 已建设"但文件不存在 → **该政策是真正待建**（罕见但可能）
+- 无论哪种情况，**永远以 `ls` 实际结果为准**
+
 ### ⚠️ 提纲索引区的死链要顺手修（2026-06-07 新发现）
 
 tongzhan-work-outline.md 末尾"政策文件索引"行可能引用错文件名的 link（如 `[[policy-gscc-charter]]` 但实际文件叫 `policy-gongshanglian.md`）。
@@ -142,6 +175,24 @@ browser_navigate("https://cn.bing.com/search?q={政策关键词}+{问题关键�
 - 表面上 `b_results` 元素存在但内容固定，无法获取新结果
 - **应对**：跳过搜索引擎，**直接走首选策略**——访问国家民委 neac.gov.cn / 中央党校 ccps.gov.cn / 新华网 news.cn 的首页或对应栏目，手动浏览"时政要闻"列表
 - **新法/未生效法的案例替代方案**：若 Bing 实在返回不了新结果，可改用"近期官方释义文章 + 学术论坛动态 + 主管机关部署会议"作为"未生效期间的制度问题信号"（详见下方"未生效新法处理方法"小节）
+
+**⚠️ Bing 搜索结果可能被"语义污染"返回毫不相关的结果（2026-06-08 新发现）**：
+- 搜"同等待遇 台民 2026 政策"返回 Spotify、YouTube、Rolls-Royce Spectre、Pizza 站点的链接
+- 搜"台胞职业资格壁垒 2026 制度"同样返回 cargurus、pizzahut 等英文站点
+- 推测是 Bing 中国版搜索服务降级或返回默认"泛匹配"结果
+- **应对**：**遇到 Bing 返回 >50% 不相关结果 → 立即放弃 Bing**，切到首选策略（直接访问权威站点首页），不要继续尝试不同关键词
+- **关键判定**：用 `grep -oE 'href="https?://[^"]*"' | sort -u` 后，看 `gov.cn` / `xinhuanet.com` / `rmzxw.com.cn` 等权威域名是否 <30% —— 是则放弃
+
+**⚠️ 直接访问权威站点首页是最稳的路径（2026-06-08 实践确认）**：
+- `curl https://www.gwytb.gov.cn/` → 一次返回 20+ 条 `t2026{MM}_{id}.htm` URL，5-6 月 2026 链接全部 200 OK
+- 比 Bing 搜索快 10 倍、准 10 倍
+- **重点看首页的"头条"列**（topone/）、"地方动态"列（local/）、"部门涉台"列（bmst/）
+- **批量验证流程**：
+  ```bash
+  curl -sL -A "Mozilla/5.0" "https://www.gwytb.gov.cn/" | iconv -f gb2312 -t utf-8//IGNORE | grep -oE 'href="[^"]*t20[0-9]+_[0-9]+\.htm"'
+  ```
+- 然后对每个 URL 跑 `curl -sL` + `iconv -f gb2312 -t utf-8` 提取标题/正文
+- **gb2312 编码陷阱**：很多中国政府站用 gb2312/gbk，`curl` 出来是乱码，必须 `iconv -f gb2312 -t utf-8//IGNORE`（`//IGNORE` 跳过无法转换的字节）
 
 **⚠️ Bing 搜索结果 URL 大量 404（2026-06-06 新发现）**：
 - Bing 列出的搜索结果看起来 URL 完整（如 `qstheory.cn/dukan/qs/2022-07/15/c_xxx.htm`、`epaper.tibet3.com/qhrb/html/2022-06/21/content_xxx.htm`、`yndaily.yunnan.cn/content/202206/21/content_xxxx.html`）
@@ -342,6 +393,7 @@ sources:
 - `references/unenforced-law-handling.md` — **未生效新法/软法** 的处理方法（含 P17 范例、四类案例替代来源、软法自评清单、写作模板）
 - `references/stable-sources.md` — **稳定 URL 备查表**（2026-06-06 沉淀）：地方纪委监委转载中央党内法规的稳定 URL 模式、政协系统案例源、必须 curl 验证再写入 sources 的 Bing 索引 URL 黑名单
 - `references/deepen-shallow-page.md` — **深化最浅页操作手册**（2026-06-07 沉淀）：当 P01-P17 全部已建时的应对、判断"最浅"页的加权规则、深化流程、真实案例参考（P15 深化过程）
+- `references/problem-case-library.md` — **制度问题案例库建设手册**（2026-06-08 沉淀）：当政策库+深化都耗尽后的第三档应对、comparisons/problem-case-*.md 章节结构、5 个同步文件路径、5 类漏洞点命名模式、五莲县级建议的强制性、与 tongzhan-info-workflow 的衔接
 
 ## 关联技能
 
@@ -382,3 +434,10 @@ sources:
 - ⚠️ **案例未找到时，绝不写页面的"典型案例"章节**——宁可留下 `⚠️ 待补充` 占位，也不要用模型领域知识伪造执法案例
 - ⚠️ 步骤 3 失败时，**报告任务时明确标注"步骤 X 未完成"**（如本任务中步骤 3、4、5 全部链式失败），并在下一次 cron run 中从头重试
 - ⚠️ 不要因为"想完成 KPI"而把未验证的"近 3 个月案例"凭印象凑数——这会污染知识库，导致后续信息稿选题基于虚假证据
+
+**关键工作纪律（2026-06-08 新增）——制度问题案例库专用**：
+- ⚠️ **`ls ~/wiki/comparisons/` 为空是"建设机会"而非"建设障碍"**——不要因为目录空就跳过，应作为"首发建设"
+- ⚠️ **problem-case 页必须有"五莲县级工作建议"小节**——3-5 条，可执行，非空话；这是与 policy 页的结构性差异
+- ⚠️ **5 个同步文件必须全做**：policy-xxx.md（如补案例） + problem-case-xxx.md（新建） + index.md（Comparisons 新增） + tongzhan-work-outline.md（2.3 节列表 + 第六节索引） + log.md（追加 create 记录）
+- ⚠️ **5 篇国台办地方动态应综合为"反差事实"**——不要列成 5 个独立案例，要找共性/缺口
+- ⚠️ **frontmatter `type: comparison` 不可写成 `entity`**——破坏知识库 type 索引一致性
