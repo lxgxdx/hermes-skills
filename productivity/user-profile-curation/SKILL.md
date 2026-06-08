@@ -356,13 +356,17 @@ content. Read them carefully rather than re-querying with narrower
 terms. A single broad OR-join query is often more useful than 3
 narrow ones for the same reason.
 
-### ⚠️ "Consecutive-cron-day" ceiling — agent runs on autopilot ~7 days max
+### ⚠️ "Consecutive-cron-day" ceiling — extends past 7 days (v8 → v9 update)
 
 v8 (2026-06-08) observed **7 consecutive cron-only days** (6/2 → 6/8)
 with zero human interaction across any platform (feishu/weixin/tg/cli).
-The user was not in the loop, but cron tasks self-advanced all 5 work
-lines (信息稿 / PPT / 部务会 / 公文 / Wiki). Past data showed 4-5 days
-as the prior ceiling.
+v9 (2026-06-09) **extends the streak to 8 days** (6/2 → 6/9) with no
+degradation in cron output quality (in fact, 6/8 + 6/9 选题 cron both
+landed; Wiki 政策 deepened P05 + P01; the three-way closed loop emerged
+naturally on 6/9). **Past data showed 4-5 days as the prior ceiling;
+8+ days is the new soft ceiling.** The real constraint is **Feishu
+webhook health**, not cron quality — when webhook is broken, the user
+is *unaware* of cron output, regardless of how many days cron has run.
 
 **Implications for the profile**:
 - After ~7 days of pure cron, **expect a human check-in** (the user
@@ -396,10 +400,9 @@ to actually `write_file` before context fills up.
 one cron task just because the workflow looks "logically connected".
 The 72-message budget is the hard constraint, not the workflow graph.
 
-### ✅ Validated pattern: "Wiki 政策库 → cron 选题" reverse loop (v8 6/8)
+### ✅ Validated pattern: "Wiki 政策库 → cron 选题 → cron Wiki 选政策" THREE-WAY loop (v8 → v9)
 
-The user designed (and 6/8 01:00 cron actually executed) a **bidirectional
-loop** between the Wiki knowledge base and the cron 选题 generator:
+**v8 验证的二向反向循环** (6/8 01:00):
 
 ```
 Wiki 政策页 (e.g. policy-taiwan-investment.md)
@@ -413,12 +416,27 @@ cron 01:00 读 ~/wiki/entities/policy-*.md
 回到 Wiki 政策页 (深化 + 新案例) OR 新建 comparisons/ 子页
 ```
 
+**v9 6/9 验证的第三向**：cron 01:00 选题热度 → cron 01:30 选政策深化对象。
+6/9 01:00 民族宗教选题最热 → 6/9 01:30 cron 选 P01 宗教政策索引页深化。
+形成 **Wiki 政策库 ↔ cron 选题 ↔ cron Wiki 选政策** 的三向闭环。
+
 **Key insight**: the user has explicitly built this loop. The Wiki
-isn't just a passive reference — it's the 选题 generator's "ore body".
+isn't just a passive reference — it's the 选题 generator's "ore body",
+AND the cron 选题's hot-topic ranking now guides which policy the
+Wiki cron will deepen next. v(n) reports must show all 3 nodes.
 
 **Profile-curation implication**: when v(n) reports Wiki progress,
 report it AS the input to the next 选题 cron run, not as standalone
-"知识沉淀" progress. The two are now one workflow.
+"知识沉淀" progress. The two are now one workflow. v(n) must also
+flag the "next predicted Wiki 选政策" based on last-day 选题 hot
+ranking so the closed loop is auditable.
+
+**Wiki 政策深化两条路径** (v9 6/9 实证): ① 母法本身深化 + comparisons/ 子页
+(P15 章程 + P05 投资法 范式); ② 索引页案例深化 (P01 宗教工作政策文件索引
+6/9 实证 — body 内加 "## 三、2026 年真实案例" 章节, 不建 comparisons/ 子页).
+v(n) 报告 Wiki 进展时必须标"深化路径" ①/②/混合.
+
+Full v9 validations: see `references/cron-v9-validations.md`.
 
 ### ✅ Workflow pattern: report file sizes in 落库状态 block (v8 confirmed)
 
@@ -489,5 +507,11 @@ table pattern verbatim into every v(n) report's 落库状态 block.
   patterns**: time-window splitting worked, Wiki→cron reverse loop
   executed, 7-day-cron ceiling observed, file-size table discipline
   standardized. Read this BEFORE designing a new cron skill.
+- `references/cron-v9-validations.md` — **v9 (2026-06-09) validated
+  patterns**: Wiki↔cron↔Wiki THREE-WAY closed loop emerged (cron
+  选题 hot-topic now guides cron Wiki policy selection); Wiki 政策
+  deepening has TWO paths (①母法本身+comparisons/ ②索引页案例深化);
+  consecutive-cron ceiling extended to 8+ days (no degradation). Read
+  this AFTER cron-v8-validations.md.
 - `scripts/verify-cron-writes.sh` — bash helper that checks N paths
   exist and are >= 1KB. Use as the last step of any cron write task.

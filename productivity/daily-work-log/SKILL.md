@@ -241,7 +241,8 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 ## 参考资料
 
 - `references/cron-runbook.md` — **逐行可复用的 cron 模式命令序列**（从查询 → 落库 → 验证完整流程），含所有已知陷阱的速查表
-- `references/cron-recurring-bugs.md` — **跨日复现的 cron 任务已知 bug & 信号清单**（飞书 webhook 失效 / backup.log 缺失 / GitHub PAT 拦截 / dream cycle 累计 bug / §5b 成功幻觉 / §5c 80% 已完成未落盘 / §5d cron SILENT 占位符 / §11 混合日 lite 模式），必须显式标注在「未完成 / 待跟进」
+- `references/cron-recurring-bugs.md` — **跨日复现的 cron 任务已知 bug & 信号清单**（飞书 webhook 失效 / backup.log 缺失 / GitHub PAT 拦截 / dream cycle 累计 bug / §5b 成功幻觉 / §5c 80% 已完成未落盘 / §5d cron SILENT 占位符 / §11 混合日 lite 模式 / §11b 半截过渡句 / §11c 完整规划-未落盘 / §12 6/8 cron 健康度破冰），必须显式标注在「未完成 / 待跟进」
+- `references/stat-validation-checklist.md` — **每日 cron 汇报 stat 验证 checklist**（2026-06-08 起源，6/9+ 强制执行）：按 cron 类别列出必 stat 文件清单 + 标准验证脚本片段 + §11c 识别速查
 
 ---
 
@@ -257,6 +258,8 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 - [ ] **【新】对 cron session 汇报的"已创建/已完成"文件，强制 stat 验证 + GBrain 跨源验证**（避免成功幻觉）
 - [ ] **【新】检测每个 cron session asst last 是否是字面量 `[SILENT]`**（8 字符），非守护型任务视为未执行
 - [ ] **【新】检测 asst last 是否是"半截过渡句"** —— 匹配 `现在写文件` / `Let me write` / `现在准备Searxng` / `Now let me` + 工具调用 `write_file=0` → 视为"未落盘"中断（§11b 第四种截断模式，2026-06-07 双 cron 同期首现）
+- [ ] **【新】检测 asst last 是否是"完整结构化规划 + 0 个 write_file"** —— asst last 列出 N 个具体项（如 1. 2. 3. 4. 选题方向 + 外地借鉴）但整段 0 个 write_file / gbrain put → 视为"伪完成"中断（§11c 第五种截断模式，2026-06-08 02:00 经验类 cron 首现）
+- [ ] **【新】对每个 cron session 汇报的"已创建文件"做强制 stat 验证（ALL session，不只成功幻觉怀疑时）** —— 6/8 实测：02:00 经验类 cron asst last 看似完整但 0 write_file，stat 验证 `经验类选题_20260608.md` 不存在才暴露；不要相信"asst last 长就完成"
 - [ ] 告知用户 slug 名称
 
 ## ⚠️ Context 控制（cron 环境必修）

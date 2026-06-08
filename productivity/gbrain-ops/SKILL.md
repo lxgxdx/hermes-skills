@@ -424,6 +424,22 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - doctor：✅ health_score 90（resolver + connection warnings）
 - embed --stale：⚠️ embedding service 内网不可达（环境限制），0 chunks
 
+### Dream Cycle 执行状态（2026-06-09）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00/01:00/01:30）；**全 cron 日，无人类对话**（连续第 8 日）
+- **01:00 tongzhan-info-workflow cron 出现新失败模式**（6/5+6/6+6/7+6/8+6/9 累计 5 次失败）：session 异常短（**16 条消息** vs 正常 72+），最后输出 "Good. Now I have full context. Let me check today's experience topic..." 在读 experience topic 阶段中断；NFS `问题类选题_20260609.md` **未生成**
+- **01:30 tongzhan-wiki-build P01 案例深化** — `policy-religion-regulations` 从 113→218 行（5.9→12.6KB，2.1×），是 5 个优先级页面中**唯一零案例**页面
+  - 配套新建 2 个 raw 文件：李干杰 2026-04 甘肃四川调研、《深入推进我国佛教中国化五年工作规划纲要（2023-2027）》
+  - 新增 3 条 2026 年权威真实案例 + 3 条新制度问题（"软法-硬法"衔接真空、基层"权小事多"无编制扩充细则、教职人员退出标准不公开）
+- wiki→brain 桥接：1 个新实体（`policy-religion-regulations`，entity 16→17）+ 1 个新人物（`li-ganjie`，person 4→5，李干杰是 6/9 案例 1 的发布主体）+ 1 个 project 页更新
+- **新发现 pitfall**：`gbrain get <slug>` 返回完整内容（含 frontmatter + body），不能从字节数判断"内容为空"
+- **staging dir 共享模式确认**：wiki-bridge 脚本先 import，再 add 新的 people/projects 到同一目录，单次 import 处理 mixed 状态（本次：1 skipped + 2 imported）
+- doctor：✅ health_score 85（与 6/2-6/8 稳定基线一致）
+- embed --stale：113/113 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 110→113 (+3), chunks 223→231 (+8), embedded 223→231, entity 16→17, person 4→5, tags 114→121
+- 关键认知：01:00 cron 出现"early-exit"新失败模式（6/10 必须验证 cron 触发链路）；drift check 模式 `wc -l` 对比 wiki vs brain；2 个 person 页都是 cron 案例引用触发
+- 详细记录：`references/dream-cycle-2026-06-09.md`
+
 ### Dream Cycle 执行状态（2026-06-08）
 
 - 实体提取：7 个 cron session，3 个含实际内容；**全 cron 日，无人类对话**（连续第 7 日）
@@ -1127,6 +1143,9 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `doctor --json` 显示 resolver_health/pgvector/RLS warnings | doctor 的某些检查项在 cron 环境路径解析有 bug | 不影响真实功能；用 `gbrain stats` 验证实际连接 |
 | YAML `[[wiki-link]]` 在 frontmatter list 字段中触发 import 错误（2026-06-08）| YAML block-collection parser 把 `[[` 当作 flow sequence 起始 | strip `[[`/`]]` 后再 import；pre-flight 用 `yaml.safe_load(fm)` 验证；详见 `references/gbrain-yaml-pitfalls-2026-05-31.md` Pitfall #2 |
 | wiki bridge 漏掉 `~/wiki/comparisons/` 目录（2026-06-08）| bridge 脚本只扫 `entities/` | bridge 逻辑要同时扫 `comparisons/`，comparisons 页面用 `type: comparison` |
+| `gbrain get <slug>` 字节数看起来很小就判断"内容为空"（2026-06-09）| `get` 返回完整 frontmatter + body，wc 显示的行数/字节数已包含两者 | 用 `gbrain get <slug> 2>&1 \| head -30` 验证 frontmatter 和首段；不要单看 `wc -lc` |
+| staging dir 重复 import 不报错但 0 imported（2026-06-09 确认）| wiki-bridge 脚本先 import 占位文件后，dream cycle 再 add people/projects 到同目录是安全的；`import` 自动跳过已存在 slug | 复用 `/tmp/gbrain-dream-YYYY-MM-DD/` 即可，无需新建 staging |
+| 01:00 tongzhan-info-workflow cron 出现"early-exit"新失败模式（2026-06-09）| session 16 条消息即停（vs 之前 72+ 耗尽），可能在读 6/3-6/8 经验类历史时中断 | 6/10 必须验证 cron 触发链路；考虑 daily-work-log session 占用了 22 条预算导致 01:00 启动时 context 异常？ |
 
 ---
 
