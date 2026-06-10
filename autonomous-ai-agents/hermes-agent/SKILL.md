@@ -640,6 +640,75 @@ Common gateway problems:
 - **Gateway dies on WSL2 close**: WSL2 requires `systemd=true` in `/etc/wsl.conf` for systemd services to work. Without it, gateway falls back to `nohup` (dies when session closes).
 - **Gateway crash loop**: Reset the failed state: `systemctl --user reset-failed hermes-gateway`
 
+### User reports "I can't reach you on platform X" — full diagnostic playbook
+
+When a user says "Hermes 和飞书通信中断了" / "微信没回复" / "Telegram 消息没收到" / "You didn't respond", do NOT immediately try to "send something" from CLI. The CLI works (they're talking to you through it) — the gateway is what's dead. Run this checklist in order:
+
+**1. Is the gateway service even running?**
+```bash
+systemctl --user status hermes-gateway
+# Look for: Active: active (running) vs failed vs inactive (dead)
+```
+- If `active (running)`: the gateway is up — problem is a specific platform adapter (jump to step 3).
+- If `failed`: the service crashed. Check the journal for `Main process exited, code=exited, status=1/FAILURE` then go to step 2.
+- If `inactive (dead)`: the service never started, or systemd gave up. **Most common cause: `StartLimitBurst=5` exhausted** — the unit's auto-restart budget is spent and systemd won't try again until the cooldown elapses (default `StartLimitIntervalSec=600` = 10 min).
+
+**2. Recover a failed gateway:**
+```bash
+systemctl --user reset-failed hermes-gateway   # clear the failed state
+systemctl --user start hermes-gateway          # start fresh
+sleep 6
+systemctl --user status hermes-gateway | head -8
+# Verify:
+journalctl --user -u hermes-gateway --since "1 minute ago" --no-pager
+```
+
+**3. After restart, verify all platform adapters connected:**
+```bash
+tail -40 ~/.hermes/logs/gateway.log
+# Look for one "✓ <platform> connected" line per platform:
+#   ✓ api_server connected
+#   ✓ telegram connected
+#   ✓ feishu connected
+#   ✓ weixin connected
+#   ✓ homeassistant connected
+#   ✓ wecom connected
+# etc.
+```
+- If a specific platform is missing from the connected list, that platform's adapter failed to start — check the journal for that platform name (e.g. `gateway.platforms.feishu`, `gateway.platforms.weixin`).
+
+**4. Verify inbound works** by asking the user to send a message from the affected platform. Watch for it in:
+```bash
+tail -f ~/.hermes/logs/gateway.log | grep -i "inbound\|received"
+# Should show: "inbound message: platform=<X> chat=<chat_id> msg='...'"
+```
+
+**Pitfall — confusion between CLI process and gateway process:**
+- `ps aux | grep hermes` showing a running Python hermes process does NOT mean the gateway is up. The current CLI session is itself a `hermes` process. To check the gateway specifically: `systemctl --user status hermes-gateway` or `pgrep -af "hermes_cli.main gateway"`.
+
+**Pitfall — check the log file, not just the process:**
+- A gateway process can be in `S (sleeping)` state with all threads dead, with no listening sockets. `ss -tlnp | grep hermes` returning nothing while `ps` shows a hermes process = zombie. The reliable check is `tail ~/.hermes/logs/gateway.log` and see if it's been written to recently. If the log hasn't grown in hours despite systemd saying "active (running)", the gateway is hung.
+
+**Pitfall — common crash chains that put the gateway into 5-failure backoff:**
+1. **Model stream stale timeout (e.g. `Stream stale for 240s`)** — the upstream LLM froze; gateway gets stuck waiting for chunks
+2. **Tool loop warning / `terminal` failing 3 times** — agent in a runaway retry, SIGTERM the whole gateway to escape
+3. **Drain timeout on shutdown** — 60s drain default; if a chat is mid-tool-call, SIGTERM → drain → interrupt → exit 1
+4. **API server key missing** — `Refusing to start: API_SERVER_KEY is required` is a warning, not fatal, but it pollutes logs and confuses diagnosis
+5. **User runs `systemctl --user restart hermes-gateway` from the gateway itself** — race condition: the gateway receives SIGTERM from its own child agent's tool call
+
+**Workaround for the StartLimitBurst=5 exhaustion problem:** edit the unit to raise the budget:
+```ini
+# /home/lxgxdx/.config/systemd/user/hermes-gateway.service
+[Unit]
+StartLimitIntervalSec=600
+StartLimitBurst=20     # was 5 — too low
+```
+Then `systemctl --user daemon-reload`.
+
+**Lingering fix for "gateway dies when I close my laptop"**: `sudo loginctl enable-linger $USER` (one-time; user systemd services survive logout).
+
+See `references/gateway-platform-comm-diagnostics.md` for the full transcript of a real recovery, the systemd unit file location, and the M3 stream-stale / API-server-key root cause detail.
+
 ### Skills Hub — 搜索和安装社区 Skills
 
 Hermes 内置了多源 Skills 搜索，功能等同于 Claude Code 的 `find-skill`：

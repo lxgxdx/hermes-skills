@@ -424,6 +424,16 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - doctor：✅ health_score 90（resolver + connection warnings）
 - embed --stale：⚠️ embedding service 内网不可达（环境限制），0 chunks
 
+### Dream Cycle 执行状态（2026-06-11）
+
+-实体提取：7 个 cron session，6 个含实际内容；**全 cron 日，无人类对话**（连续第9 日）
+- **01:00 tongzhan-info-workflow cron打破连续6 天失败模式**（6/5+6/6+6/7+6/9+6/10失败）— `问题类选题_20260611.md`成功生成；6/8简化策略（跳过 wiki挖掘/限制浏览器/优先写 NFS）继续生效
+- **01:30 tongzhan-wiki-build P16党外干部双重管理** — 新建 entity `policy-party-outside-cadres`，raw `party-outside-cadres-summary-2026-06-11.md`
+- **02:00经验类选题 cron失败** —41消息预算耗尽，`经验类选题_20260611.md` 未生成；需类似6/8简化策略或合并到01:00
+- wiki→brain桥接：1 个新实体（`policy-party-outside-cadres`，entity17→18）+1 个新 raw
+- doctor / embed：⏸️ **未执行**（max-tool-call限制中断）；按6/9 基线预期 health_score85 +100% coverage
+-详细记录：`references/dream-cycle-2026-06-11.md`
+
 ### Dream Cycle 执行状态（2026-06-09）
 
 - 实体提取：7 个 cron session，3 个含实际内容（00:00/01:00/01:30）；**全 cron 日，无人类对话**（连续第 8 日）
@@ -1143,9 +1153,14 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `doctor --json` 显示 resolver_health/pgvector/RLS warnings | doctor 的某些检查项在 cron 环境路径解析有 bug | 不影响真实功能；用 `gbrain stats` 验证实际连接 |
 | YAML `[[wiki-link]]` 在 frontmatter list 字段中触发 import 错误（2026-06-08）| YAML block-collection parser 把 `[[` 当作 flow sequence 起始 | strip `[[`/`]]` 后再 import；pre-flight 用 `yaml.safe_load(fm)` 验证；详见 `references/gbrain-yaml-pitfalls-2026-05-31.md` Pitfall #2 |
 | wiki bridge 漏掉 `~/wiki/comparisons/` 目录（2026-06-08）| bridge 脚本只扫 `entities/` | bridge 逻辑要同时扫 `comparisons/`，comparisons 页面用 `type: comparison` |
-| `gbrain get <slug>` 字节数看起来很小就判断"内容为空"（2026-06-09）| `get` 返回完整 frontmatter + body，wc 显示的行数/字节数已包含两者 | 用 `gbrain get <slug> 2>&1 \| head -30` 验证 frontmatter 和首段；不要单看 `wc -lc` |
-| staging dir 重复 import 不报错但 0 imported（2026-06-09 确认）| wiki-bridge 脚本先 import 占位文件后，dream cycle 再 add people/projects 到同目录是安全的；`import` 自动跳过已存在 slug | 复用 `/tmp/gbrain-dream-YYYY-MM-DD/` 即可，无需新建 staging |
-| 01:00 tongzhan-info-workflow cron 出现"early-exit"新失败模式（2026-06-09）| session 16 条消息即停（vs 之前 72+ 耗尽），可能在读 6/3-6/8 经验类历史时中断 | 6/10 必须验证 cron 触发链路；考虑 daily-work-log session 占用了 22 条预算导致 01:00 启动时 context 异常？ |
+| `gbrain get <slug>`字节数看起来很小就判断"内容为空"（2026-06-09）| `get` 返回完整 frontmatter + body，wc 显示的行数/字节数已包含两者 | 用 `gbrain get <slug>2>&1 \| head -30`验证 frontmatter 和首段；不要单看 `wc -lc` |
+| staging dir重复 import 不报错但0 imported（2026-06-09确认）| wiki-bridge脚本先 import 占位文件后，dream cycle 再 add people/projects 到同目录是安全的；`import` 自动跳过已存在 slug |复用 `/tmp/gbrain-dream-YYYY-MM-DD/`即可，无需新建 staging |
+|01:00 tongzhan-info-workflow cron出现"early-exit"新失败模式（2026-06-09）| session16 条消息即停（vs之前72+耗尽），可能在读6/3-6/8经验类历史时中断 |6/10 必须验证 cron触发链路；考虑 daily-work-log session 占用了22 条预算导致01:00启动时 context异常？ |
+| **terminal工具文件名追加"2" bug（2026-06-11）**| terminal 在某些命令上会向文件名追加字符（如 `python3 /tmp/fix.py` →实际尝试 `/tmp/fix.py2`），反复报 "can't open file" |改用短文件名或完全不同文件名（如 `/tmp/z.py`）；看到 "File 'X2'"错误立刻换名字 |
+| **SQLite `LIMIT`字符串拼接陷阱（2026-06-11）**| Python拼接 `"LIMIT" + "1"`产生 `LIMIT1`（无效 SQL，无空格）；同样 `"ORDER BY id " + "LIMIT1"` 也产生 `LIMIT1`（空格被吃掉）| **唯一可靠写法**：`"ORDER BY id " + "LIMIT" + " " + "1"`（空格必须独立字符串）；或用完整字面量 `"ORDER BY id LIMIT1"` |
+| **write_file工具空白规范化（2026-06-11）**| `write_file` 把连续多空格压成单空格，导致 Python嵌套缩进失效 | Python源码用 tab缩进（`\t`）而非空格；heredoc 在 cron 中只能写 tab缩进的 Python |
+|01:00 cron连续失败6 天后6/11 首胜（6/5+6/6+6/7+6/9+6/10失败）|6/8简化策略（跳过 wiki挖掘/限制浏览器/优先写 NFS）继续生效；连续单次成功不能确认修复 |6/12+继续监控至少2-3 天，确认稳定基线 |
+|02:00经验类选题 cron41消息预算持续不足（2026-06-11）| 与01:00 问题类相似但更紧迫，NFS 文件未生成 |需类似6/8简化策略；或合并到01:00 单次跑两类 |
 
 ---
 
