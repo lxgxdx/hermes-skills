@@ -259,7 +259,9 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 - [ ] **【新】检测每个 cron session asst last 是否是字面量 `[SILENT]`**（8 字符），非守护型任务视为未执行
 - [ ] **【新】检测 asst last 是否是"半截过渡句"** —— 匹配 `现在写文件` / `Let me write` / `现在准备Searxng` / `Now let me` + 工具调用 `write_file=0` → 视为"未落盘"中断（§11b 第四种截断模式，2026-06-07 双 cron 同期首现）
 - [ ] **【新】检测 asst last 是否是"完整结构化规划 + 0 个 write_file"** —— asst last 列出 N 个具体项（如 1. 2. 3. 4. 选题方向 + 外地借鉴）但整段 0 个 write_file / gbrain put → 视为"伪完成"中断（§11c 第五种截断模式，2026-06-08 02:00 经验类 cron 首现）
+- [ ] **【新】检测 asst last 是否是"研究/验证已完成 + 0 write_file"** —— asst last 是"研究/设计结果汇报"（"I have all the context" / "Good — none of the new keywords" / "Let me also check" / "Let me verify" 等）+ write_file=0 → 视为 §11d 第六种截断模式（2026-06-11 02:00 双 cron 同期首现：user-model v10 + 经验类）
 - [ ] **【新】对每个 cron session 汇报的"已创建文件"做强制 stat 验证（ALL session，不只成功幻觉怀疑时）** —— 6/8 实测：02:00 经验类 cron asst last 看似完整但 0 write_file，stat 验证 `经验类选题_20260608.md` 不存在才暴露；不要相信"asst last 长就完成"
+- [ ] **【新】cron 健康度按"任务家族"分组评分** —— 不要按 session 数简单分子分母（6/8 01:00 破冰 + 02:00 仍失败 = 整体 75% 健康度但同根因家族 0%）；02:00 经验类连续 3 日失败（6/9+6/10+6/11）证明破冰是 task-specific 不是 cron-wide（§13）
 - [ ] 告知用户 slug 名称
 
 ## ⚠️ Context 控制（cron 环境必修）

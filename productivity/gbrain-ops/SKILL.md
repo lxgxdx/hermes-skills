@@ -1156,7 +1156,12 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | `gbrain get <slug>`字节数看起来很小就判断"内容为空"（2026-06-09）| `get` 返回完整 frontmatter + body，wc 显示的行数/字节数已包含两者 | 用 `gbrain get <slug>2>&1 \| head -30`验证 frontmatter 和首段；不要单看 `wc -lc` |
 | staging dir重复 import 不报错但0 imported（2026-06-09确认）| wiki-bridge脚本先 import 占位文件后，dream cycle 再 add people/projects 到同目录是安全的；`import` 自动跳过已存在 slug |复用 `/tmp/gbrain-dream-YYYY-MM-DD/`即可，无需新建 staging |
 |01:00 tongzhan-info-workflow cron出现"early-exit"新失败模式（2026-06-09）| session16 条消息即停（vs之前72+耗尽），可能在读6/3-6/8经验类历史时中断 |6/10 必须验证 cron触发链路；考虑 daily-work-log session 占用了22 条预算导致01:00启动时 context异常？ |
-| **terminal工具文件名追加"2" bug（2026-06-11）**| terminal 在某些命令上会向文件名追加字符（如 `python3 /tmp/fix.py` →实际尝试 `/tmp/fix.py2`），反复报 "can't open file" |改用短文件名或完全不同文件名（如 `/tmp/z.py`）；看到 "File 'X2'"错误立刻换名字 |
+| terminal工具文件名追加"2" bug（2026-06-11）| terminal 在某些命令上会向文件名追加字符（如 `python3 /tmp/fix.py` →实际尝试 `/tmp/fix.py2`），反复报 "can't open file" |改用短文件名或完全不同文件名（如 `/tmp/z.py`）；看到 "File 'X2'"错误立刻换名字 |
+| **delete-then-reimport 第三次实战（2026-06-12）**| wiki 文件"内容重写但 slug 已存在"的标准 SOP：drift check → delete → reimport；不需先做漂移检查，直接 delete + reimport 即可 | 详见 `references/dream-cycle-2026-06-12.md`（含 6/07/6/09/6/12 三次实战对比）|
+| **staging dir 两次 import 共享"skipped (unchanged)"（2026-06-12 确认）**| dream cycle 第二次 import 同一 staging dir 时，entity 已被正确写入（4 chunks created）→ 第二次 import 看到 "1 skipped (1 unchanged)" 是预期幂等行为 | 不要因此误判失败；staging dir 复用完全安全 |
+| **"shallowest page" 重建路径稳定（2026-06-09 → 6/11 → 6/12）**| tongzhan-wiki-build cron 每周 2 步"最浅页重建"：找"行数最少+字节最小+0 真实案例"的优先级页面优先深化 | 详见 `references/dream-cycle-2026-06-12.md`（3 次路径对比）|
+| **01:00 tongzhan-info-workflow 2-day success streak（2026-06-12 确认）**| 6/11 破冰 → 6/12 稳定，但 6/13+ 必须继续监控（单次成功不能确认修复）| 6/8 简化策略（跳 wiki 挖掘/限浏览器/优先写 NFS）连续 2 日奏效 |
+| **Dream Cycle 2026-06-12 详细记录** | `references/dream-cycle-2026-06-12.md`（10th 连续全 cron 日 + P16 重建 + delete-then-reimport 第 3 次实战 + 01:00 cron 2-day success）| 新增 |
 | **SQLite `LIMIT`字符串拼接陷阱（2026-06-11）**| Python拼接 `"LIMIT" + "1"`产生 `LIMIT1`（无效 SQL，无空格）；同样 `"ORDER BY id " + "LIMIT1"` 也产生 `LIMIT1`（空格被吃掉）| **唯一可靠写法**：`"ORDER BY id " + "LIMIT" + " " + "1"`（空格必须独立字符串）；或用完整字面量 `"ORDER BY id LIMIT1"` |
 | **write_file工具空白规范化（2026-06-11）**| `write_file` 把连续多空格压成单空格，导致 Python嵌套缩进失效 | Python源码用 tab缩进（`\t`）而非空格；heredoc 在 cron 中只能写 tab缩进的 Python |
 |01:00 cron连续失败6 天后6/11 首胜（6/5+6/6+6/7+6/9+6/10失败）|6/8简化策略（跳过 wiki挖掘/限制浏览器/优先写 NFS）继续生效；连续单次成功不能确认修复 |6/12+继续监控至少2-3 天，确认稳定基线 |

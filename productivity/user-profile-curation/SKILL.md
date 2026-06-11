@@ -228,6 +228,82 @@ or try to deliver the output yourself. Just produce your report/output
 as your final response and the system handles the rest." The user's
 notification channel is the gateway's job, not the agent's.
 
+### 🚨 Feishu webhook HTTP 200 ≠ delivery OK (v10 6/12 实证)
+
+**The trap**: When you POST a JSON payload to
+`https://open.feishu.cn/open-apis/bot/v2/hook/<TOKEN>`, Feishu returns
+**HTTP 200** even when the body is
+`{"code":19001,"msg":"param invalid: incoming webhook access token
+invalid"}`. The agent sees 200, assumes success, declares "已通知用户"
+— but the user never received anything.
+
+**v10 6/12 实测** (this exact pitfall fired during my run):
+
+```bash
+# Looks like success
+$ curl -sS -o /dev/null -w "HTTP %{http_code}\n" \
+    -X POST "$FEISHU_HOOK" \
+    -H "Content-Type: application/json" \
+    -d '{"msg_type":"text","content":{"text":"test"}}'
+HTTP 200  # ← you stop here and call it done
+
+# But the body is...
+$ curl -sS -X POST "$FEISHU_HOOK" ...
+{"code":19001,"data":{},"msg":"param invalid: incoming webhook access token invalid"}
+```
+
+**Symptom chain in profile delivery**:
+1. v6/v7/v8/v9 reports marked "⚠️ 飞书 webhook 19001 失效 192+ 小时"
+2. v10's self-test showed `HTTP 200` → I assumed webhook recovered
+3. Sent a `msg_type: post` payload (rich card) → Feishu returned
+   `{"code":19001,"msg":"param invalid"}`
+4. Confirmed via plain `text` test → still 19001
+5. **Webhook was broken the whole time**; the 200 was a transport-layer
+   success, not an application-layer success
+
+**Why this is dangerous for user-profile specifically**:
+- The whole point of "send to user via Feishu" is delivery confirmation
+- If the agent lies "✅ 飞书通知已发出" the user will check Feishu,
+  see nothing, and trust your work less
+- A lying "success" is worse than an honest "webhook broken, here's the
+  file path to read"
+
+**Defensive protocol** (do this EVERY time, not just on first try):
+
+```bash
+# 1. Body check (NOT status-only)
+resp=$(curl -sS -X POST "$FEISHU_HOOK" \
+  -H "Content-Type: application/json" \
+  -d "$payload")
+echo "$resp" | head -c 300
+
+# 2. Parse code field
+code=$(echo "$resp" | python3 -c "import json,sys; print(json.load(sys.stdin).get('code',-1))" 2>/dev/null)
+
+# 3. Only declare success if code == 0 (Feishu returns code=0 on real success)
+if [ "$code" = "0" ]; then
+  echo "✅ Feishu delivery confirmed (code=0)"
+else
+  echo "❌ Feishu rejected: $resp"
+  echo "→ Fallback: write to ~/.hermes/memories/USER.md (already done)"
+  echo "→ Cron auto-deliver channel will surface to user via gateway"
+fi
+```
+
+**When the webhook is broken, the fallback is the cron auto-deliver
+channel** (the system prompt's "Your final response will be automatically
+delivered to the user" mechanism). The canonical USER.md file is the
+real deliverable; Feishu is a redundant channel. Document the fallback
+in the 落库状态 block — never silently say "已通知".
+
+**Related v10 finding**: when calling `clarify` from a Feishu-sourced
+cron job, Feishu also returns HTTP 200 with code=19001 for invalid
+bot/user pairings. The same body-check protocol applies to ANY Feishu
+API call, not just webhooks.
+
+Full transcript + 3 case studies:
+`references/feishu-webhook-false-positive.md`.
+
 ### ⚠️ Cron "成功幻觉" — agent 汇报与现实脱节
 
 In cron mode, agent sometimes reports "已创建 N 个文件" in the final
@@ -513,5 +589,10 @@ table pattern verbatim into every v(n) report's 落库状态 block.
   deepening has TWO paths (①母法本身+comparisons/ ②索引页案例深化);
   consecutive-cron ceiling extended to 8+ days (no degradation). Read
   this AFTER cron-v8-validations.md.
+- `references/feishu-webhook-false-positive.md` — **Feishu webhook
+  HTTP 200 false positive trap** (v10 6/12 实证): Feishu returns
+  HTTP 200 with body `{"code":19001,"msg":"param invalid..."}` when
+  the webhook token is broken. Look at body code, NOT status code.
+  Read this BEFORE any "send to Feishu" step.
 - `scripts/verify-cron-writes.sh` — bash helper that checks N paths
   exist and are >= 1KB. Use as the last step of any cron write task.

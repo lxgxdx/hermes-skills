@@ -187,7 +187,6 @@ sources: [源文件或领域知识补充标注]
 - 关联其他知识库（如 government-law-wiki）时，在 sources 和关联页面中标注
 
 ## cron 自动化 Wiki 建设
-## cron 自动化 Wiki 建设
 每天定时（如凌晨01:30）构建政策知识库的流程：
 
 1. **读取提纲**：读取 `~/wiki/tongzhan-work-outline.md`，找状态为"待建设"的政策
@@ -314,7 +313,6 @@ sources: [源文件或领域知识补充标注]
 - **找不到原文**：基于领域知识补充，在 sources 中标注"基于领域知识"
 - **安全扫描拦截**：cron 环境不允许 `| python3` 管道传参模式，改用 `write_file` → `terminal` 路径
 
-## Wiki 路径
 ## Wiki 路径
 
 **按领域分目录，每项目独立，不混用。**
