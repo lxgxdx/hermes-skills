@@ -1,6 +1,6 @@
 # 跨日复现的 cron 任务已知 bug & 信号清单
 
-> 2026-06-04 首次整理，2026-06-05 大幅扩充（新增 §5b 成功幻觉 / §5c 前 N 步已规划但未落盘 / §10 dream cycle 0 净增正常信号）。2026-06-06 新增 §5d cron 整段 SILENT 占位符（第三种截断模式）+ §11 01:00 问题类 cron 连续 2 日同类失败。2026-06-07 新增 §11b asst last "半截过渡句" 第四种截断模式。2026-06-08 新增 §11c "完整结构化规划 + 0 write_file" 第五种截断模式 + §12 6/8 cron 健康度破冰（01:00 选题 4 日失败链条终结）。2026-06-11 新增 §11d "工具配额用尽 + 0 write_file" 第六种截断模式（02:00 双 cron 同期失败）+ §13 6/11 验证 6/8 破冰非结构性（01:00 破冰 + 02:00 同日同根因失败，6/9+6/10+6/11 三连败）。每日 cron session 中都会重复出现这些 bug，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
+> 2026-06-04 首次整理，2026-06-05 大幅扩充（新增 §5b 成功幻觉 / §5c 前 N 步已规划但未落盘 / §10 dream cycle 0 净增正常信号）。2026-06-06 新增 §5d cron 整段 SILENT 占位符（第三种截断模式）+ §11 01:00 问题类 cron 连续 2 日同类失败。2026-06-07 新增 §11b asst last "半截过渡句" 第四种截断模式。2026-06-08 新增 §11c "完整结构化规划 + 0 write_file" 第五种截断模式 + §12 6/8 cron 健康度破冰（01:00 选题 4 日失败链条终结）。2026-06-11 新增 §11d "工具配额用尽 + 0 write_file" 第六种截断模式（02:00 双 cron 同期失败）+ §13 6/11 验证 6/8 破冰非结构性（01:00 破冰 + 02:00 同日同根因失败，6/9+6/10+6/11 三连败）。**2026-06-12 新增**：§5e `[SILENT` 尾缀变体（与 §5d 字面精确匹配的区分）/ §14 漏报自检反馈循环（cron 跨任务互相验证产出）/ §15 dream cycle 12× 差距时强制走 delete-then-reimport / §16 PVE Wiki cron 时段迁移（06:00→02:00）。每日 cron session 中都会重复出现这些 bug，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
 
 ## 🔴 高优先级（每日重复出现的 P0 信号）
 
@@ -8,7 +8,7 @@
 
 - **症状**：所有 cron 任务完成后向飞书回报时返回 `19001 access token invalid`
 - **首次发现**：2026-06-02（48+ 小时）
-- **2026-06-06 状态**：100+ 小时持续失效
+- **2026-06-12 状态**：**240+ 小时持续失效**（从 6/2 发现到 6/12 已 10 天，4 个 cron 任务受"成功但通知失败"影响：01:00/01:30/02:00×2）
 - **影响**：所有 cron 任务的用户通知全部丢失；用户只能通过每日 00:00 的 daily-work-log cron session 间接看到结果
 - **应对**：daily log 必须在「未完成 / 待跟进」顶部列出此条；连续多日需要在「未完成」开头用 `🔴 **飞书 webhook 持续失效 XX 小时**` 突出显示
 - **修复路径**（需用户操作，不在 cron 范围内）：重新走飞书开放平台授权流程，更新 webhook token 到 `~/.hermes/config.yaml` 或 `.env`
@@ -48,16 +48,19 @@
 - **症状**：dream cycle 报"今日 Wiki +N pages"，但实际 cron session 只新建 M 个页面（M < N）
 - **首次发现**：2026-06-03（14 vs 1）
 - **2026-06-06 状态**：连续 4 日存在
+- **2026-06-12 验证**：`policy-minzu-tuanjie.md` 重建 2.1KB→25KB（**12× 字节增长**），dream cycle 报告"pages 115 不变 / chunks 240 (+3) / tags 123 (+2)"——**pages 数没变但内容增 12× 是因为走了 delete-then-reimport**（见 §15）。口径冲突在 delete-then-reimport 模式下**自动消失**，因为 chunk 数 + tags 数能正确反映内容变化
 - **根因**：`dream-cycle-wiki-bridge.sh` 累计读 `~/wiki/log.md` 近期行（含跨日增量），把"近期 wiki 增长"误算为"今日 wiki 增长"
 - **应对**：
   1. daily log 已在「未完成 / 待跟进」列出"复查 `dream-cycle-wiki-bridge.sh` 累计逻辑"
   2. dream cycle 报告中"Δ pages" + "Δ chunks" 数字**不可直接采信**，须用 `find ~/wiki -name '*.md' -newermt 'YYYY-MM-DD 00:00' ! -newermt 'YYYY-MM-DD 23:59'` 单独验证
+  3. **新发现**：如果 dream cycle 报告"pages 不变但 chunks + tags 大增"，说明走了 delete-then-reimport，需要确认脑库是否同步重建
 - **修复路径**：cron owner 检查 `~/scripts/dream-cycle-wiki-bridge.sh` 增量逻辑
 
 ### 5. cron session 第一条 asst 消息常常是空字符串
 
 - **症状**：cron 注入式 user 消息数百到 11k 字符；agent 第一反应是 100 字符内的过渡回复（如 "I'll start by..."），第一条 asst 长度 < 200 字符
 - **2026-06-04 实测**：11 个 cron session 中 10 个 `asst[0] = 0`（占 91%）
+- **2026-06-12 实测**：11 个 cron session 中 `asst[0]=0` 仅 2 个（占 18%）；`asst[0]=32-179` 字符（短过渡句）9 个（占 82%）。**说明 cron 注入长度增加后，agent 第一反应从"空字符串"演化为"短过渡句"**，仍属于"读 asst[0] = 不可信"
 - **影响**：旧的"读第一条 asst = 成果摘要"假设失效
 - **应对**：必须用 `asst[-1]` 读取 cron 任务的成果汇报；如果 `asst[-1] < 100`，再 `asst[-2]` 复核
 - **已编码在 SKILL.md 主体**（"Pitfall: cron session 的第一条 assistant 消息常常是空字符串"），本条只作为"实测数据"补充
@@ -70,6 +73,15 @@
   - 实际 `~/wiki/concepts/` 下 4 文件**均不存在**
   - GBrain 搜索 "Proxmox VE 安装" / "GPU 直通" / "Frigate PVE" → 全部无相关 chunk
 - **2026-06-06 状态**：连续 2 日同类（同一 cron session id 6/6 仍为 `0abf80bf4d68`，沿用 6/5 失败模式）
+- **2026-06-12 验证**（**首次批量通过 stat 验证**）：9 个 cron session 汇报的关键文件全部 stat 验证通过——
+  - `问题类选题_20260612.md` 40,564 字节 ✓（cron 报 40,564 字节）
+  - `经验类选题_20260612.md` 51,847 字节 ✓（cron 报 51,847 字节）
+  - `policy-minzu-tuanjie.md` **25,620 字节 / 321 行** ✓（cron 报"321行/25KB"——**byte 级别一致**）
+  - `minzu-tuanjie-deepening-2026-06-12.md` 15,361 字节 ✓（cron 报 15.4KB）
+  - PVE Wiki 4 文件 2.8-3.5KB ✓
+  - `hermes_backup_20260612_030031.tar.gz` 3.9G ✓
+  - `USER.md` v10 21,496B / `USER.md.bak.v9_1781200932` 14,431B ✓
+  - **GBrain 跨源验证**：`gbrain search "民族团结进步创建工作深化部署 P16"` top hit `entities/policy-minzu-tuanjie` 0.1982 ✓
 - **根因猜测**：agent 在 `write_file` 工具调用失败 / 超时 / context 截断前已经按"假设成功"路径生成汇报段
 - **应对**（daily log 必做的 3 件事）：
   1. **强制 stat 验证**：对每个 cron session 汇报的关键文件路径，run `ls -la <path> 2>&1` 检查文件存在 + 大小 > 1KB
@@ -90,18 +102,14 @@
   - asst[10] 列出 5 个选题组合（2 类型 A 台湾 + 3 类型 B 制度漏洞）
   - asst[14] 确认排重完成
   - `问题类选题_20260605.md` **未生成**
-- **2026-06-06 状态**：**连续 2 日同类失败**（同一 cron 任务 `68a578b26b`，6/5 与 6/6 均为 asst last < 200 chars）
-  - 6/6 asst[4]：读完 6/03-6/04 + 6/05 经验类（共 24 个本地选题）建立排重库
-  - 6/6 asst[24]：建立 Wiki 政策富矿 A-E 五组（台湾投资保护法/互联网宗教/宗教活动场所/宗教教职人员/民族团结促进法）
-  - 6/6 asst[25]：抓到观察者网 6/6 头条"五眼联盟"新角度
-  - 6/6 asst last = 116 chars（在"打开文章详情"阶段截断，**未生成 `问题类选题_20260606.md`**）
-- **与"未开始"区别**：未开始 = asst 全短过渡句；此模式 = asst 中段已经做了 80% 工作
+- **2026-06-12 验证破冰**：`cron_68a578b26b6c_20260612_010024` 39 msgs / asst last 2,294 chars **成功**，5 选题完整落盘 40,564 字节，**§5c 模式在 01:00 问题类 cron 上终结**——连续 4 日失败（6/5+6/6+6/7+6/8+6/11 §11d 中两次类似）→ 6/12 成功
 - **应对**：
   1. 检测到 asst last = 0 + 期望输出文件不存在 → 标 `⚠️ 任务疑似中断（已完成 80%，缺落盘）`
   2. 建议 fallback：用 `delegate_task` 把"把 asst[10] 选题组合写入文件"作为单步任务派发
   3. **连续 2 日同 bug**：必须在「未完成」加 `❌ 01:00 问题类 cron 连续 2 日同类失败`（升 P0）
   4. 长期：tongzhan-info-workflow skill 的"落盘 step"应拆为独立 sub-step，便于失败重试
   5. **可复用素材**：6/6 asst[24] 已建立完整的 A-E 政策富矿分析 + 6/6 asst[25] 已抓取观察者网 6/6 头条"五眼联盟"——6/7 01:00 cron 可**跳过 wiki 挖掘和新闻抓取阶段**，直接用这些留底素材写文件
+  6. **6/12 真实成功路径**：`cron_68a578b26b6c_20260612_010024` 创新地**执行 6/11 cron 异常检测**——读 6/11 cron 报告的 0 漏洞文件 + 人工深度阅读发现 21 个漏报 + 5 选题全部从漏报富矿派生（见 §14）
 
 ### 5d. cron session 整段只返回字面量 `[SILENT]`（第三种截断模式，2026-06-06 新发现）
 
@@ -110,9 +118,10 @@
   - `cron_0abf80bf4d68_20260606_020012`（llm-wiki-build，PVE wiki 概念页）—— 12 msgs / asst last = `[SILENT]`
   - `cron_8670107d659c_20260606_200008`（home-assistant-ops）—— 5 msgs / asst last = `[SILENT]`
   - `cron_e08019f497a1_20260606_210022`（check-wechat-issue）—— 4 msgs / asst last = `[SILENT]`
+- **2026-06-12 验证**：2 个 cron session 命中（FP310 + wechat-issue-tracker），属"无变化守护型任务"，**100% 合规**（见 §5e 检测方法）
 - **与"空字符串截断"区别**：`asst last = ''`（len=0）通常出现在 agent 进入死循环后被截断；`[SILENT]` 字符串是 agent 显式决定的"我没什么可汇报的"信号
 - **与"成功幻觉"区别**：成功幻觉 = asst last 长且结构化（看着像真完成）；`[SILENT]` = asst last 极短（看着像真没做事）
-- **根因猜测**（待 6/7 02:00 验证）：
+- **根因猜测**：
   1. skill 注入型 user 消息（10k+ 字符）让 agent 推断"任务已由其他 cron 接管 / 我没新增信息可报"
   2. skill 模板本身要求 agent 在无新产出时回 SILENT（**应改**：让 agent 至少回"已检查，无变更"再正常退出）
   3. cron 容器在 PVE/HA 操作的硬限流（但本日 3 个任务类型完全不同，不像是限流）
@@ -124,6 +133,28 @@
   4. **SILENT 占位符消歧**：建议在 cron 模板里把 `[SILENT]` 改为 `[NOOP_NO_CHANGES]` 或 `[CHECKED_NO_UPDATES]`，让 daily log 能区分"agent 静默退出"和"agent 没在工作"
 - **为什么重要**：今天 1 飞书 + 11 cron 的"混合日 lite"模式下，3 个 SILENT cron 占据了 25% 的 cron 任务量；如果不显式标注，整日 cron 产出统计严重虚高
 - **SILENT vs 成功幻觉 共性**：两者都是 agent **最终没真正做事**的信号，但一个是"汇报假完成"（长报告），一个是"汇报假无事"（极短占位符）。daily log 必须对这两种都做交叉验证
+
+### 5e. `[SILENT` 尾缀变体检测（2026-06-12 新发现）
+
+- **症状**：cron session 最后一条 asst 内容是**完整结论**（如 "FP310 is not yet supported by Zigbee2MQTT. No action needed."），但在 asst 末尾追加字面 `[SILENT`（带前导换行，**不闭合右方括号**）。这与 §5d 的严格 `[SILENT]`（8 字符精确匹配）不同——是**partial SILENT 占位符**
+- **2026-06-12 实测**：
+  - `cron_8670107d659c_20260612_200029`（FP310 Support Monitor）—— 5 msgs / asst last 195 chars，结尾：`...FP310 is not yet supported by Zigbee2MQTT. No action needed.\n\n[SILENT`（前导换行 + 缺失 `]`）
+  - `cron_e08019f497a1_20260612_210029`（wechat-issue-tracker）—— 4 msgs / asst last 103 chars，结尾：`...both PRs (#12016 and #12223) remain OPEN.\n\n[SILENT`
+  - **结果**：两个 cron 任务都有**真实结论**（"FP310 不支持" / "issue/PR 无变化"）——属于"应该静默的守护型任务"，符合预期
+- **与 §5d 严格匹配的区别**：
+  - §5d 严格匹配：`last.strip() == '[SILENT]'`（完整 8 字符字面量）
+  - §5e 变体：`'[SILENT' in last` 且 last > 50 字符（说明有真实结论 + SILENT 占位符）
+- **⚠️ False positive 警告**：**绝对不要用** `'[SILENT]' in last` 的精确字符串检查！2026-06-12 用户模型 v10 cron（`cron_2f03227164de_20260612_020025`）asst last 14,088 字符包含 `\`[SILENT]\` 不会被使用` 字面量——这是**用户模型 agent 显式声明"我不使用 SILENT 占位符"**，属于**完整结构化报告中的合法引用**。如果用 `'[SILENT]' in last` 会**严重误报**为 §5d SILENT
+- **正确的 §5d/§5e 二段检测**（cron 必备）：
+  ```python
+  # 第一段：严格字面量（§5d 经典）
+  is_silent_classic = last.strip() == '[SILENT]'
+  # 第二段：尾缀变体（§5e）
+  is_silent_trailing = last.rstrip().endswith('[SILENT') or last.rstrip().endswith('[SILENT\n')
+  # 合并 + 防 FP 约束：last 长度必须 < 500 才视为 SILENT
+  is_silent = (is_silent_classic or is_silent_trailing) and len(last) < 500
+  ```
+- **应对**：先按 §5d/§5e 检测 + 长度约束判 SILENT，**再用 cron job 名称分类**（守护型 vs 非守护型）决定是否标 `❌` 还是 `✅`
 
 ## 🟢 低优先级（一次性的脚本/格式观察）
 
@@ -143,6 +174,7 @@
 
 - **症状**：dream cycle 报告 `pages 101→103 / chunks 194→199`（净增 5），但每步详细日志都是 `imported=0/1/2 unchanged` —— 看起来"无新工作"但实际有增长
 - **真实情况**：0 imported 是因为今日唯一新建（01:30 P17）已被 0130 cron 同步到 GBrain；dream cycle 在 02:00 跑时 P17 已存在；"小幅增长"主要来自日志追加和 tongzhan-info-topics 累计更新（不是新建）
+- **2026-06-12 验证**：dream cycle 报"pages 115 不变 / chunks 240 (+3) / tags 123 (+2)"，与 01:30 P16 wiki 重建（policy-minzu-tuanjie 64→321 行）走 delete-then-reimport 模式一致——**pages 不变但 content 大增** = 已正确处理（见 §15）
 - **应对**：dream cycle 报告里 `pages/chunks` 净增数 + `imported=0` 看似矛盾但**不需要 follow-up**；只有当 dream cycle 报 `imported > 0` 但 filesystem 找不到对应文件时，才触发"成功幻觉"检查
 
 ### 11b. "asst last = '现在写文件 / 先准备 Searxng 搜索'" 第四种截断模式（2026-06-07 新发现）
@@ -151,6 +183,10 @@
 - **首次发现**：2026-06-07 **双 cron 同期触发**：
   - `cron_68a578b26b6c_20260607_010057`（01:00 问题类选题）—— 72 msgs / asst[26] = 995 chars，最后一句 = "Let me write the output file now:" → `问题类选题_20260607.md` **未生成**
   - `cron_59f917bbc534_20260607_020055`（02:00 经验类选题）—— 102 msgs / asst[42] = 3094 chars，最后一句 = "现在写文件。先准备Searxng搜索作为辅助：" → `经验类选题_20260607.md` **未生成**
+- **2026-06-12 验证破冰**：
+  - 01:00 问题类 cron 在 6/12 成功落盘（39 msgs / asst last 2,294 chars）—— §11b 模式在 01:00 cron **终结**
+  - 02:00 经验类 cron 在 6/12 成功落盘（96 msgs / asst last 1,252 chars）—— §11b/§11c/§11d 模式在 02:00 经验类 cron **终结**
+  - **结论**：01:00 + 02:00 信息稿 cron 在 6/12 完成了"4 截断模式全破冰"，5 月以来的失败链条在 6/12 终结
 - **与 §5b 成功幻觉区别**：成功幻觉 = asst last **长且结构化**（含文件名 + 路径 + 大小 + 下一步），看着像真完成；此模式 = asst last **中长 + 半截过渡句**，"意图表达"完成但**实际写盘动作未执行**
 - **与 §5c 80% 已完成未落盘区别**：§5c = asst last = 0（被截断在某个工具调用后）；此模式 = asst last ≠ 0，但**写盘动作在 asst 之后从未发生**
 - **与 §5d `[SILENT]` 占位符区别**：`[SILENT]` = 8 字符整段占位符；此模式 = asst last 通常 800-3100 字符，最后一句是"半截"动作意图
@@ -190,6 +226,7 @@
   - **预期输出** `/mnt/nfs/2026年统战工作/8.信息工作/选题库/经验类选题_20260608.md` **未生成**（stat 验证：ls 报"没有那个文件或目录"）
   - **会话内 write_file 调用数 = 0**（从未真正落盘）
   - 这是 6/8 全 cron 日 12 个 session 中**唯一**被 stat 验证戳穿的"伪完成"
+- **2026-06-12 验证破冰**：02:00 经验类 cron 在 6/12 成功（96 msgs / asst last 1,252 chars / 51,847 字节落盘）—— §11c 模式在 02:00 经验类 cron **终结**
 - **与 §5b 成功幻觉（2026-06-05 PVE Wiki）区别**：
   - §5b = agent 汇报"**已创建** 4 文件"（用过去时），含详细路径 + 大小 + 实施步骤，看着像真完成；实际是**agent 自以为 write_file 成功了**但没成功
   - §11c = agent 汇报"现在准备生成"（用将来时），**从未声明已完成**；实际是 agent 列完内容后**直接到时间窗结束**没机会落盘
@@ -201,7 +238,7 @@
 - **与 §5c 80% 已完成未落盘（2026-06-05 01:00）区别**：
   - §5c = asst last = 0（典型截断在工具调用后）
   - §11c = asst last > 500 字符（截断在 asst 文本生成后，工具调用从未发起）
-- **根因（确认）**：info-workflow cron 在"设计 + 抓取 + 排重 + 列内容"阶段把 asst 配额用尽；agent 把"将要写什么"先在 asst 里铺完整（这是它的正常工作流），但 cron 时间窗到点时**还没排到 `write_file` 调用**。和 §11b 是同根因（cron 消息预算结构性不足），但**触发的 asst 形态不同**（§11b = 过渡句；§11c = 完整规划）
+- **根因（确认）**：info-workflow cron 在"设计 + 抓取 + 排重 + 列内容"阶段把 asst 配额用尽；agent 把"将要写什么"先在 asst 里铺完整（这是它的正常工作流），但 cron 时间窗到点时**还没排到 `write_file` 调用**。和 §11b 是同根因（cron 消息配额结构性不足），但**触发的 asst 形态不同**（§11b = 过渡句；§11c = 完整规划）
 - **检测三件套**（每日 cron 必做）：
   1. **asst last 文本扫描**：匹配"现在生成" / "现在写文件" / "现在创建" / "Now let me write" / "即将生成" 等"动作意图未执行"短语；**新增**：匹配"列出的内容结尾是否有冒号收尾"（如 "...现在生成今日选题文件:" 末尾 `:` 是 §11c 强信号）
   2. **工具调用统计**：`grep -c 'write_file' <session_messages>` 期望输出文件路径的 cron 任务 → `write_file = 0` 立即标 `❌ 任务疑似中断（asst 完整规划但未落盘）`
@@ -218,8 +255,12 @@
 
 - **症状**：cron session 中段做了大量准备性工作（读 state.db / 调 LLM 提取 / 抓数据），asst 中间出现多次"准备落盘"过渡，asst last 是**单句状态汇报**（如 "I have all the context I need. Now let me write the v10 report." 或 "Good — none of the new keywords... Let me also check..."），但**会话内 write_file 工具调用数 = 0**，期望输出文件不存在
 - **首次批量发现**：2026-06-11 **02:00 双 cron 同期触发**：
-  - `cron_2f03227164de_20260611_020018`（用户模型深度分析 v10）—— 96 msgs / asst last = 265 chars："I have all the context I need. Now let me write the v10 report. The user's task spec asked for a deep analysis with markdown report. Since this is a daily cron continuation, the v10 should focus on **the new evidence + a holistic deep model** as the spec requested." → v10 报告**未落盘**
-  - `cron_59f917bbc534_20260611_020018`（02:00 经验类选题）—— 41 msgs / asst last = 169 chars："Good — none of the new keywords... Let me also check for several more potential keywords:" → `经验类选题_20260611.md` **未生成**（stat 验证 `ls: 没有那个文件或目录`）
+  - `cron_2f03227164de_20260611_020018`（用户模型深度分析 v10）—— 96 msgs / asst last = 265 chars：v10 报告**未落盘**
+  - `cron_59f917bbc534_20260611_020018`（02:00 经验类选题）—— 41 msgs / asst last = 169 chars：`经验类选题_20260611.md` **未生成**
+- **2026-06-12 验证**：
+  - 02:00 用户模型 cron 在 6/12 成功（`cron_2f03227164de_20260612_020025`，58 msgs / asst last **14,088 chars**）—— §11d 模式在用户模型 cron **终结**
+  - 02:00 经验类 cron 在 6/12 成功（96 msgs / asst last 1,252 chars）—— §11d 模式在 02:00 经验类 **终结**
+  - **重要发现**：6/12 用户模型 v10 asst last 14,088 字符包含**显式否定句** `\`[SILENT]\` 不会被使用 —— 此任务有明确的新增产出`（长度 ≥ 14,000 字符）—— 这是**用户模型 agent 主动声明"我不使用 SILENT"**。如果 daily log 用 `last_len < 100` 阈值或 `'[SILENT]' in last` 子串检查，会**严重误报**为 SILENT 模式（见 §5e）
 - **与 §5b 成功幻觉区别**：成功幻觉 = asst last **长且结构化**（含文件名 + 路径 + 大小 + 实施步骤），agent "已声明" 完成但实际没做；§11d = asst last **短且无声明完成**（200-300 chars 内，停留在"准备写"状态），agent **从未声明完成**但实际也未做
 - **与 §5c 80% 已完成未落盘区别**：§5c = asst last = 0（典型截断在某个工具调用后）；§11d = asst last > 100 字符（截断在 asst 文本生成后，工具调用从未发起）
 - **与 §11b 半截过渡句区别**：§11b = asst last 是 "现在写文件"/"Let me write the output file now:" 这种**单句中文/英文动作意图**；§11d = asst last 是**完整的研究/设计结果汇报**（"I have all the context" / "Good — none of the new keywords..."）+ 收尾过渡到下一步，但**根本没发出 write_file 工具调用**
@@ -246,10 +287,16 @@
 - **跨日持续**：
   - 6/9 必须用 02:00 经验类选题验证破冰是否**结构性**（而不只是 01:00 偶发）
   - 6/8 02:00 经验类仍 §11c 失败 → 破冰**未扩散**到同根因任务
+- **2026-06-12 全面破冰确认**：01:00 问题类 + 02:00 经验类 + 02:00 用户模型 三大 §5b/§5c/§11b/§11d 历史失败任务在 6/12 全部**首次连续破冰**（详见 §5b/§5c/§11b/§11c/§11d 各自 2026-06-12 验证段）。**6/12 是 5 月以来信息稿 + 用户模型 cron 任务的转折日**——4 种截断模式（§5b/§5c/§11b/§11c/§11d）在 6/12 全部终结
 - **应对**：
   1. **乐观但不放松**：在「重要决定」块记录"01:00 破冰"作为正面信号
   2. **同根因排查**：在「未完成」块把 02:00 经验类连续 4 日失败升 P0，与 01:00 破冰形成对比
   3. **不要归功单一改动**：01:00 破冰是"Wiki 富矿 + 拆时间窗 + 排重成熟"三因素叠加，6/9 02:00 复跑才能验证哪一因素是主因
+  4. **6/12 全面破冰原因猜想**（待 6/13+ 验证）：
+     - Wiki 政策库建设从 6/3 起的 30+ 文件积累完成"反向素材"库
+     - cron 时间窗拆分（6/8 起 01:00 选题 → 01:30 案例补全）给复杂任务足够配额
+     - 排重规则迭代（近 3 天 + Wiki 富矿 + 经验类同步）成熟
+     - tongzhan-info-workflow skill 模板 6/8+ 调整后给 agent 更明确的"先 write_file 再继续"指令
 - **PVE llm-wiki-build 6/6 vs 6/7 vs 6/8 三日对比修正**（同 6/8 完成）：
   - 6/6 SILENT → 真未执行
   - 6/7 健康检查任务（1 patch 验证 4 页面状态，本来就不建新页）
@@ -264,18 +311,98 @@
   - 6/10 02:00 经验类：当日 daily log 记录**经验类选题未生成**（连续失败）
   - 6/11 02:00 经验类：`cron_59f917bbc534_20260611_020018` 41 msgs §11d 截断（见 §11d）
   - **02:00 经验类连续 3 日失败**（6/9+6/10+6/11），**破冰未扩散到同根因任务**
+- **2026-06-12 反转**：02:00 经验类 cron **首次破冰**（96 msgs / 51,847 字节 / 8 选题）—— §13 阶段性结论**反转**：破冰**最终是结构性的**，但需要 5 日（6/8 01:00 → 6/12 02:00）才扩散到同根因任务
 - **真正的破冰信号**（2026-06-11 校正）：
   - 01:00 破冰是**局部胜利**，原因是 6/5-6/7 新建的 policy-*.md Wiki 富矿 + 排重成熟 + 信息稿 cron 模板迭代
   - 02:00 经验类**根本未破冰**，原因是**任务结构不同**（经验类需要去重 + 找地方实践案例 + 对比，asst 配额消耗模式与 01:00 选题设计不同）
 - **应对修正**：
   1. **不要把"01:00 破冰"夸大为"cron 健康度全面恢复"** —— 6/8 + 6/11 经验类同根因失败证明破冰是 task-specific
   2. **破冰判断标准**应是**"同根因任务在 N 日内是否也破冰"**：6/8 01:00 破冰 + 6/8 02:00 仍失败 = 破冰只覆盖了 01:00 任务
-  3. **02:00 经验类根本性修复路径**：
-     - 拆时段（02:00 dream cycle + 02:30 经验类 + 03:00 PVE wiki + 03:30 user model）让每个 cron 有独立配额
-     - 或加"候选留底机制"（asst last 已列内容先存 `~/wiki/raw/经验类候选_YYYY-MM-DD.md` 再继续）
-     - 或在 tongzhan-info-workflow skill 模板里**强制**每完成 N 条 asst 就 write_file 一次
-  4. **跨日持续 follow-up**：6/12 必须用 02:30 新时段复跑经验类 + 验证 4 cron 拆时段是否能让 02:00 时段配额从"4 cron 共享"变成"2 cron 共享"（02:00 dream + user-model + 02:30 经验 + PVE）
+  3. **6/12 经验类破冰后的下一步**：
+     - 6/13+ 验证 02:00 经验类是否**连续破冰**（不是单次偶发）
+     - 跨日观察 02:00×4 并行（dream cycle + user model + 经验类 + PVE wiki）是否被新时段拆分方案替换
+     - 关注 02:00 用户模型 v10 6/12 破冰路径（58 msgs / 14,088 chars vs 6/11 96 msgs / 265 chars）—— **消息数减半但 asst last 增长 53×**——证明"调研阶段配额被合并到 asst 文本"模式已被新 skill 模板修复
+  4. **跨日持续 follow-up**：6/13+ 02:00 经验类是否连续破冰决定 tongzhan-info-workflow skill 是否需要 v2 升级
 - **为什么重要**：6/8 当时 daily log 报告"cron 健康度 9/12 = 75%"让 daily log 整体偏乐观；6/9+6/10+6/11 持续 02:00 经验类失败说明**健康度评分要按"任务家族"分组**，不能按 session 数简单分子分母。一个家族全失败（如 02:00 经验类连续 3 日）+ 另一家族全成功（如 06:00 skills sync 连续 100% 成功）= 整体健康度 50/50 才有意义
+
+### 14. "漏报自检"反馈循环（cron 跨任务互相验证）（2026-06-12 新发现）
+
+- **症状**：一个 cron 任务的**异常检测**触发另一个 cron 任务**深度复核**，发现 6/11 cron 报告"0 漏洞"的 4 个 Wiki 文件实际有 **21 个标注漏洞**被主正则漏报
+- **首次发现**：2026-06-12 01:00 问题类选题 cron（`cron_68a578b26b6c_20260612_010024`，39 msgs / asst last 2,294 chars）
+  - **Step 1（6/11 02:00 cron 异常检测）**：dream cycle 统计时发现 4 个 policy-*.md 文件扫描 0 漏洞，触发"异常检测"分支
+  - **Step 2（6/12 01:00 cron 深度复核）**：手动 deep-read 4 文件，定位根因：Wiki 政策库建设时两种标注格式并存（`**xx漏洞** — xx` 内联 vs `### 2.x 标题` 章节），而旧扫描脚本只匹配内联格式
+  - **Step 3（6/12 01:00 cron 异常利用）**：5 选题全部从漏报富矿派生，0 重复
+  - **Step 4（SKILL 升级建议）**：5 项必做升级写入 `references/2026-06-12-cron-insights.md`
+- **量化数据**：
+  | 文件 | 6/11 扫描 | 6/12 实际 | 6/12 利用 |
+  |------|----------|----------|----------|
+  | `policy-religious-personnel.md` | 0 | 6 | 3 |
+  | `policy-religion-regulations.md` | 0 | 5 | 1 |
+  | `policy-internet-religion.md` | 0 | 5 | 1 |
+  | `policy-party-outside-cadres.md` | 0 | 5 | 0 |
+  | **合计** | **0** | **21** | **5** |
+- **根因**：tongzhan-info-workflow skill 二B-1 步骤 1 扫描脚本是**单正则**（`\*\*([^*]+漏洞[^*]*)\*\*`）只匹配内联 `**xx漏洞**` 格式，不识别 `### 2.x` 章节格式
+- **与之前模式的区别**：
+  - §5b/§5c/§11b/§11c/§11d 都是"截断/失败"模式；§14 是**正向自纠错**模式
+  - §14 不需要"未完成 / 待跟进"标注，而是要在「重要决定」中**突出**（"agent 不再单向跑任务，而是具备'自检 → 复核 → 修正'循环"）
+- **应对**（daily log 必做的 3 件事）：
+  1. **「重要决定」**块记录："01:00 cron 首次实现漏报自检反馈循环，6/11 异常检测 → 6/12 深度复核 → 5 选题派生 → SKILL 升级 5 项"
+  2. **「生成的文件」**块附"漏报自检升级"路径（`~/.hermes/skills/productivity/tongzhan-info-workflow/references/2026-06-12-cron-insights.md`）
+  3. **「未完成」**块标注 "**SKILL 升级 5 项**待用户审核：双正则扩展 + 异常检测扩段 + 维度补集硬约束 + 排重记录文件化 + 5 维度补集自检"
+- **为什么重要**：6/12 是 cron 任务的**质变**——从"单向产出"升级到"产出 + 自检 + 自纠错"循环。这是 dream cycle 设计的本意（"反思前一晚产出"）在 01:00 cron 上的首次完整实现
+- **跨日持续 follow-up**：
+  - 6/13+ 02:00 dream cycle 是否把"漏报自检"扩展到其他子系统（Wiki / 备份 / skill 同步）
+  - tongzhan-info-workflow skill 模板 6/13+ 是否真的应用 5 项升级（如已应用，01:00 cron 报告"已升级：双正则" 等关键词应出现）
+  - 其他 cron 任务（llm-wiki-build / user-model / PVE wiki）是否也能引入"漏报自检"
+
+### 15. dream cycle 12× 差距时强制走 delete-then-reimport（2026-06-12 新发现）
+
+- **症状**：dream cycle 同步时，如果 `wiki/entities/<file>.md` 实际大小与 GBrain chunk 缓存的 size 出现**显著差距（≥ 10×）**，普通 `import` 调用会被**内容哈希判定为 unchanged 静默跳过**——这会导致"wiki 重建 12× 但 GBrain 仍是旧版"
+- **首次发现**：2026-06-12 01:30 TZB Wiki cron 重建 `policy-minzu-tuanjie.md` 2.1KB→25KB（**12× 字节增长**），dream cycle 02:00 同步时**必须**走 delete-then-reimport：
+  - 6/12 dream cycle 报告："🔄 **delete-then-reimport** `entities/policy-minzu-tuanjie` | 64→321 行 / 2.1→25KB (12×字节)"
+  - 同步后 GBrain 状态："Pages 115 (0 in-place) / **Chunks 237→240 (+3)** / **Tags 121→123 (+2)**"
+  - **关键观察**：pages 数**不变**（因为走的是 delete-then-reimport）但 chunks 和 tags **正确增长**——这与"新建 page"的模式（pages +1, chunks +N）不同
+- **根因猜测**：`dream-cycle-wiki-bridge.sh` 的 `import_file` 调用内部用 hash 缓存机制；同一 `slug` + 内容变化 ≥ 10× 时，旧 hash 缓存命中但新内容被忽略（实际可能是 hash 缓存策略错误，但 dream cycle 通过 delete-then-reimport 绕过）
+- **应对**（cron owner 必做）：
+  1. **dream cycle 模板**增加"size diff 检测"：
+     ```python
+     wiki_size = os.path.getsize('~/wiki/entities/<file>.md')
+     brain_cached_size = gbrain.get_cached_size('entities/<file>')
+     if wiki_size > 0 and brain_cached_size > 0:
+         ratio = wiki_size / brain_cached_size
+         if ratio >= 10 or ratio <= 0.1:
+             # 强制走 delete-then-reimport 路径
+             gbrain.delete('entities/<file>')
+             gbrain.import_file('~/wiki/entities/<file>.md', slug='entities/<file>')
+     ```
+  2. **daily log 「生成的文件」**块附"脑库同步状态"：
+     ```
+     | `policy-minzu-tuanjie.md` | `~/wiki/entities/` | P16 重建 2.1→25KB / 321 行（**dream cycle 走 delete-then-reimport**，chunks +3 / tags +2） |
+     ```
+  3. **dream cycle 报告**首次出现"delete-then-reimport"动作时，在「重要决定」块突出：
+     "脑库 stats 与 wiki 文件 size 12× 差距时必须走 delete-then-reimport 流程——普通 import 会被内容哈希判定为 unchanged 静默跳过"
+- **为什么重要**：6/12 是该模式**首次完整跑通**——之前 wiki 重建（6/9 P01 深化、6/11 P12 深化）时 dream cycle 报告都**没有"delete-then-reimport"动作记录**，可能是因为那些重建 size 差距没达到 10× 触发线，或者 dream cycle 模板刚加这个分支
+- **跨日持续 follow-up**：
+  - dream cycle 报告若再次出现 "delete-then-reimport" 动作 → 记录 size 差距数据建立触发阈值经验
+  - 6/13+ llm-wiki-build cron 如重建其他文件 size 差距 ≥ 10×，dream cycle 应自动触发
+
+### 16. PVE Wiki cron 时段迁移 06:00 → 02:00（2026-06-12 新观察）
+
+- **症状**：PVE Wiki cron（`cron_0abf80bf4d`）在 6/9-6/11 都在 **06:00 时段**跑，6/12 移到 **02:00 时段**——这是 cron 模板 schedule 调整的**首次观察**
+- **首次发现**：2026-06-12 daily log 元数据扫描
+  - 6/9-6/11 PVE Wiki cron 时间戳均在 06:xx 范围（session id `20260609_06xxxx` / `20260610_06xxxx` / `20260611_06xxxx`）
+  - 6/12 PVE Wiki cron 时间戳在 02:xx 范围（`cron_0abf80bf4d68_20260612_020025`）
+- **可能原因**：
+  1. cron 模板 schedule 调整（用户主动改 crontab）
+  2. 02:00×4 并行（dream cycle + user model + 经验类 + PVE wiki）使 PVE wiki 移到 02:00 与其他 4 个 cron 同跑
+  3. 06:00 02:00×4 整体前移到 02:00 减少晚间 cron 负载
+- **应对**：
+  1. **daily log 「未完成」**块标注"**PVE Wiki cron 时段迁移 06:00 → 02:00** —— 待 6/13+ 观察是否稳定"
+  2. **跨日持续 follow-up**：
+     - 6/13+ PVE Wiki cron 时间戳应在 02:xx 范围（如果稳定）或回 06:xx（如果是一次异常）
+     - 02:00×5 并行（5 个 cron 而非 4 个）会进一步挤压 02:00 时段工具配额
+     - 如果 02:00×5 触发 §11d 复现，需要建议用户回滚到 06:00 或继续拆分时段
+- **为什么重要**：cron schedule 变化不显式标注会导致 daily log 误读"为什么 PVE Wiki 突然在 02:00 跑"——可能引起 02:00 经验类/用户模型 cron 配额问题排查时的**误导性证据**。必须用首行时段信息明确每个 cron 的预期时段
 
 ## 跨日 follow-up 模板
 
@@ -296,6 +423,10 @@
 - ❌ **完整规划-未落盘（YYYY-MM-DD 新发现）** — <cron session id> asst last 列出 N 项内容规划 + 0 个 write_file，期望输出文件不存在；属第五种截断模式（§11c），需 `delegate_task` 单步派发落盘
 - ❌ **asst-走-到-现在-写文件-前中断（YYYY-MM-DD 新发现）** — <cron session id> asst last 是半截过渡句（"现在写文件"/"Let me write"），0 个 write_file；属第四种截断模式（§11b），建议拆时间窗
 - ✅ **cron 健康度破冰** — 某连续失败 cron 任务首次成功（如 6/8 01:00 选题），需对比同期同根因任务是否同步破冰（6/8 02:00 经验类未破 = 破冰非结构性）
+- ✅ **cron 健康度结构性破冰**（2026-06-12 新增）— 多个 §5b/§5c/§11b/§11c/§11d 历史失败任务在同一日全部首次破冰（如 6/12 01:00 选题 + 02:00 经验类 + 02:00 用户模型 v10），需 6/13+ 验证是否连续破冰
+- ✅ **漏报自检反馈循环**（2026-06-12 新增）— 某 cron 任务的异常检测触发另一 cron 任务深度复核（如 6/12 01:00 cron deep-read 6/11 4 文件发现 21 漏报），详见 §14
+- 🔄 **dream cycle 12× 差距时强制走 delete-then-reimport**（2026-06-12 新增）— 脑库 stats 与 wiki 文件 size 12× 差距时普通 import 静默跳过，必须 delete-then-reimport（详见 §15）
+- ⏰ **PVE Wiki cron 时段迁移 06:00 → 02:00**（2026-06-12 新增）— 待 6/13+ 观察是否稳定（详见 §16）
 ```
 
 其中 XX 小时是"自首次发现"累计时长；连续多日要在 daily log 顶部用 `⚠️ P0 跨日持续` 标注。

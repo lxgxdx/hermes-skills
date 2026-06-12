@@ -128,6 +128,7 @@ print('Total sessions:', len(out), 'Total messages:', sum(len(s['messages']) for
 ```
 
 **打印 session 摘要时附 asst 状态**（cron 必备，元数据一眼看出哪些 session 是"截断 vs 完整"）：
+
 ```bash
 python3 -c "
 import sqlite3, json
@@ -150,8 +151,17 @@ for s in out:
     asst = [m for m in s['msgs'] if m[1] == 'assistant']
     first_len = len(asst[0][2]) if asst else 0
     last_len = len(asst[-1][2]) if asst else 0
-    flag = ' ⚠️EMPTY_LAST' if asst and last_len < 100 else ''
-    print(f\"  {s['id'][:50]} | {s['source']} | {s['mc']} msgs | asst[0]={first_len} asst[-1]={last_len}{flag}\")
+    last_content = asst[-1][2] if asst else ''
+    # §5d 严格 SILENT + §5e 尾缀变体 + 长度约束
+    is_silent_classic = last_content.strip() == '[SILENT]'
+    is_silent_trailing = last_content.rstrip().endswith('[SILENT') or last_content.rstrip().endswith('[SILENT\n')
+    flag = ''
+    if (is_silent_classic or is_silent_trailing) and last_len < 500:
+        flag = ' ⚠️SILENT'
+    elif asst and last_len < 100:
+        flag = ' ⚠️EMPTY_LAST'
+    print(f\"  {s['id'][:55]} | {s['source']} | {s['mc']} msgs | asst[0]={first_len} asst[-1]={last_len}{flag}\")
+    print(f'    title={s[\"title\"]!r}')
 print('Total sessions:', len(out), 'Total messages:', sum(len(s['msgs']) for s in out))
 "
 ```
@@ -161,6 +171,7 @@ print('Total sessions:', len(out), 'Total messages:', sum(len(s['msgs']) for s i
 - 摘要级别的元数据（session id/source/title/时间/消息数）一次性打印
 - 单条消息内容**按 session 单独 `read_file`/`search_files` 提取**，避免挤爆 context
 - cron 模式上下文比交互模式紧（默认几千 token），分批读取是必须的
+- **SILENT 检测必须用长度约束**（见 §5e）：不要用 `'[SILENT]' in last` 子串检查（2026-06-12 用户模型 v10 asst last 14,088 字符含 `\`<SILENT>\` 不会被使用` 字面量是合法引用而非 SILENT 模式）
 
 ### Step 3: 提炼并格式化
 
@@ -241,7 +252,7 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 ## 参考资料
 
 - `references/cron-runbook.md` — **逐行可复用的 cron 模式命令序列**（从查询 → 落库 → 验证完整流程），含所有已知陷阱的速查表
-- `references/cron-recurring-bugs.md` — **跨日复现的 cron 任务已知 bug & 信号清单**（飞书 webhook 失效 / backup.log 缺失 / GitHub PAT 拦截 / dream cycle 累计 bug / §5b 成功幻觉 / §5c 80% 已完成未落盘 / §5d cron SILENT 占位符 / §11 混合日 lite 模式 / §11b 半截过渡句 / §11c 完整规划-未落盘 / §12 6/8 cron 健康度破冰），必须显式标注在「未完成 / 待跟进」
+- `references/cron-recurring-bugs.md` — **跨日复现的 cron 任务已知 bug & 信号清单**（飞书 webhook 失效 / backup.log 缺失 / GitHub PAT 拦截 / dream cycle 累计 bug / §5b 成功幻觉 / §5c 80% 已完成未落盘 / **§5d cron SILENT 占位符 / §5e SILENT 尾缀变体（2026-06-12 新增）** / §11 混合日 lite 模式 / §11b 半截过渡句 / §11c 完整规划-未落盘 / §12 6/8 cron 健康度破冰 / **§14 漏报自检反馈循环（2026-06-12 新增）** / **§15 dream cycle 12× 差距 delete-then-reimport（2026-06-12 新增）** / **§16 PVE Wiki cron 时段迁移 06:00→02:00（2026-06-12 新增）**），必须显式标注在「未完成 / 待跟进」
 - `references/stat-validation-checklist.md` — **每日 cron 汇报 stat 验证 checklist**（2026-06-08 起源，6/9+ 强制执行）：按 cron 类别列出必 stat 文件清单 + 标准验证脚本片段 + §11c 识别速查
 
 ---
@@ -256,12 +267,16 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 - [ ] 已存入 GBrain，slug 格式为 `daily/YYYY-MM-DD`
 - [ ] 已用 `gbrain search <关键词>` 反向验证落库成功（相似度 >0.9）
 - [ ] **【新】对 cron session 汇报的"已创建/已完成"文件，强制 stat 验证 + GBrain 跨源验证**（避免成功幻觉）
-- [ ] **【新】检测每个 cron session asst last 是否是字面量 `[SILENT]`**（8 字符），非守护型任务视为未执行
+- [ ] **【新】检测每个 cron session asst last 是否是字面量 `[SILENT]`（§5d）或 `[SILENT` 尾缀变体（§5e）**——必须加 `len < 500` 长度约束避免用户模型 v10 这种"含 `[SILENT]` 字面量但实际是 14KB 完整报告"的 FP
 - [ ] **【新】检测 asst last 是否是"半截过渡句"** —— 匹配 `现在写文件` / `Let me write` / `现在准备Searxng` / `Now let me` + 工具调用 `write_file=0` → 视为"未落盘"中断（§11b 第四种截断模式，2026-06-07 双 cron 同期首现）
 - [ ] **【新】检测 asst last 是否是"完整结构化规划 + 0 个 write_file"** —— asst last 列出 N 个具体项（如 1. 2. 3. 4. 选题方向 + 外地借鉴）但整段 0 个 write_file / gbrain put → 视为"伪完成"中断（§11c 第五种截断模式，2026-06-08 02:00 经验类 cron 首现）
 - [ ] **【新】检测 asst last 是否是"研究/验证已完成 + 0 write_file"** —— asst last 是"研究/设计结果汇报"（"I have all the context" / "Good — none of the new keywords" / "Let me also check" / "Let me verify" 等）+ write_file=0 → 视为 §11d 第六种截断模式（2026-06-11 02:00 双 cron 同期首现：user-model v10 + 经验类）
 - [ ] **【新】对每个 cron session 汇报的"已创建文件"做强制 stat 验证（ALL session，不只成功幻觉怀疑时）** —— 6/8 实测：02:00 经验类 cron asst last 看似完整但 0 write_file，stat 验证 `经验类选题_20260608.md` 不存在才暴露；不要相信"asst last 长就完成"
 - [ ] **【新】cron 健康度按"任务家族"分组评分** —— 不要按 session 数简单分子分母（6/8 01:00 破冰 + 02:00 仍失败 = 整体 75% 健康度但同根因家族 0%）；02:00 经验类连续 3 日失败（6/9+6/10+6/11）证明破冰是 task-specific 不是 cron-wide（§13）
+- [ ] **【新】检测 §5e SILENT 尾缀变体（2026-06-12 新增）** —— asst last 末尾 `[SILENT`（缺失 `]`）也属 SILENT 模式，**必须加 `len < 500` 长度约束**避免误报（如用户模型 v10 14,088 字符含 `[SILENT]` 字符串是合法引用）
+- [ ] **【新】标注"漏报自检"反馈循环（§14，2026-06-12 新增）** —— 一个 cron 任务的异常检测触发另一 cron 任务的深度复核（典型：01:00 cron deep-read 6/11 报告 0 漏洞文件发现 21 实际漏洞 + 5 选题派生 + SKILL 升级 5 项），属"自检 → 复核 → 修正"正向循环，需在「重要决定」中突出
+- [ ] **【新】标注 dream cycle 12× 差距时 delete-then-reimport（§15，2026-06-12 新增）** —— 脑库 stats 与 wiki 文件 size 差距 ≥ 10× 时普通 import 静默跳过，必须走 delete-then-reimport；daily log「生成的文件」块需附"脑库同步状态"（chunks +N / tags +N）
+- [ ] **【新】标注 PVE Wiki cron 时段迁移（§16，2026-06-12 新增）** —— 6/9-6/11 PVE Wiki 在 06:00 跑，6/12 移到 02:00，需在「未完成」记录"待 6/13+ 观察是否稳定"
 - [ ] 告知用户 slug 名称
 
 ## ⚠️ Context 控制（cron 环境必修）
@@ -288,7 +303,7 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 3. **cron 任务的最后一条 assistant 消息**（成果汇报，通常是日报 / 总结 / `## 任务完成报告` / `# 🧠 Dream Cycle ... 完成报告` 这类结构化结论）
 4. **cron 任务的中间过程**（只在需要追细节时读）
 
-**⚠️ Pitfall: cron session 的第一条 assistant 消息常常是空字符串**（2026-06-03 实测，11 个 cron session 全部 `asst[0] = ''`）。原因：cron prompt 注入式 user 消息长达数百到 11k 字符，agent 第一反应是 "I'll start by..." 之类 100 字符内的过渡回复，然后才进入正式工作流。所以**读取 cron session 时必须跳过第一条 asst，直接读最后一条**，不要相信 "读第一条 asst 就是成果摘要" 的旧假设。
+**⚠️ Pitfall: cron session 的第一条 assistant 消息常常是空字符串或短过渡句**（2026-06-04 实测 91% `asst[0]=0`；2026-06-12 实测 18% `asst[0]=0` + 82% `asst[0]=32-179 短过渡句`）。原因：cron prompt 注入式 user 消息长达数百到 11k 字符，agent 第一反应是 100 字符内的过渡回复，然后才进入正式工作流。所以**读取 cron session 时必须跳过第一条 asst，直接读最后一条**，不要相信 "读第一条 asst 就是成果摘要" 的旧假设。
 
 **⚠️ Pitfall: 跨 session 叙事一致性 — 不要相信前序 cron session 的"汇总数"**。真实案例 2026-06-03：dream cycle session（02:00）汇报 "Wiki 14 个新 policy-*.md 页面"，但 01:30 的 llm-wiki-build session 实际只新建了 1 个 P07。原因是 dream cycle 读了 `~/wiki/log.md` 累计历史行（混合了过去多天的增量），把"近期 wiki 增长"等同于"今天 wiki 增长"。  
 **应对**：每个 session 的产出以**该 session 自己 first user + last asst 提到的文件路径/动作**为权威，前序 session 的"汇总"只在显式标注 "Today built N" 时才采信。日报里若发现两个 session 提到的产出数量冲突，必须在「未完成 / 待跟进」标注并指明哪个 session 需复核。
@@ -384,6 +399,7 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
   - `cron_0abf80bf4d68_20260606_020012`（llm-wiki-build，PVE wiki 概念页）—— 12 msgs / asst last = `[SILENT]`
   - `cron_8670107d659c_20260606_200008`（home-assistant-ops）—— 5 msgs / asst last = `[SILENT]`
   - `cron_e08019f497a1_20260606_210022`（check-wechat-issue）—— 4 msgs / asst last = `[SILENT]`
+- **2026-06-12 验证**：2 个 cron session 命中（FP310 + wechat-issue-tracker），属"无变化守护型任务"，**100% 合规**——但使用了**§5e 尾缀变体**（`[SILENT` 而非 `[SILENT]`），不能只用 §5d 严格匹配
 - **与"空字符串截断"区别**：`asst last = ''`（len=0）通常出现在 agent 进入死循环后被截断；`[SILENT]` 字符串是 agent 显式决定的"我没什么可汇报的"信号
 - **与"成功幻觉"区别**：成功幻觉 = asst last 长且结构化（看着像真完成）；`[SILENT]` = asst last 极短（看着像真没做事）
 - **根因猜测**（待 6/7 02:00 验证）：skill 注入型 user 消息（10k+ 字符）让 agent 推断"任务已由其他 cron 接管 / 我没新增信息可报"，直接用 SILENT 占位；或 skill 模板本身要求 agent 在无新产出时回 SILENT
@@ -393,11 +409,14 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
   2. **非守护型任务 + SILENT** → 视为"任务未执行"，在「未完成 / 待跟进」标 `❌ cron SILENT（未执行）`
   3. **跨日累计同类**：若 6/6 已有 3 个 SILENT cron，6/7 02:00 cron 必须复跑这 3 个任务
 - **为什么重要**：今天 1 飞书 + 11 cron 的"混合日 lite"模式下，3 个 SILENT cron 占据了 25% 的 cron 任务量；如果不显式标注，整日 cron 产出统计严重虚高
+- **§5e 变体检测**（2026-06-12 新增）：asst last 末尾 `[SILENT`（缺失 `]`）也属 SILENT 模式；详见 references/cron-recurring-bugs.md §5e
+- **⚠️ False positive 警告**：**绝对不要用 `'[SILENT]' in last` 子串检查**——2026-06-12 用户模型 v10 asst last 14,088 字符含 `\`<SILENT>\` 不会被使用` 字面量是合法引用
 
 **⚠️ Pitfall: cron 任务"成功幻觉"（SUCCESS HALLUCINATION）— 必须 stat 验证**（2026-06-05 新发现）：
 
 - **现象**：agent 写出长且结构化的"完成报告"作为最后一条 asst（含详细文件路径 + 大小 + 实施步骤），但**实际文件未落地**。和"普通截断"（asst last = 0）的关键区别：成功幻觉 = asst last **长且结构化**
 - **首次案例**：2026-06-05 02:00 PVE Wiki cron（`0abf80bf4d`）汇报"已创建 4 个核心页面"，但 `~/wiki/concepts/` 下 4 文件均不存在，GBrain 也搜不到
+- **2026-06-12 验证 stat 协议全过**：9 个 cron session 汇报的关键文件全部 stat 验证通过——`policy-minzu-tuanjie.md` 25,620 字节 / 321 行与 cron 报告"321行/25KB" **byte 级别一致**；`问题类选题_20260612.md` 40,564 字节、`经验类选题_20260612.md` 51,847 字节、PVE Wiki 4 文件 2.8-3.5KB、备份 3.9G、USER.md v10 21,496B 全部 ✓
 - **必做的 3 步验证**（每个 cron session 汇报的关键文件都要做）：
   1. **filesystem stat**：`ls -la <path> 2>&1` 看文件存在 + 大小 > 1KB
   2. **GBrain 跨源验证**：`gbrain search "<文件核心实词>"` 看是否有相关 chunk

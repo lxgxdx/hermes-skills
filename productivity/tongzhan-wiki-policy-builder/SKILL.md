@@ -70,6 +70,10 @@ P01-P17 全部"✅ 已建"后，**不要谎报"无新政策可建"**。最浅页
   - 补 1-2 条近 3 个月真实执行案例
   - 更新 `created` / `updated` 字段，更新 `log.md` 标注为"update | 深化"
 - **实际案例**：2026-06-07 cron 任务——P15 政策页仅 65 行 2.2KB，优先列表其他项都已建，选择深化 P15（章程 8 章 51 条 + 6 条案例 + 5 类问题），扩至 295 行 8.8KB
+- **实际案例**：2026-06-09 cron 任务——P01 索引页（唯一零案例）深化，113 行/5.9KB → 218 行/12.6KB
+- **实际案例**：2026-06-11 cron 任务——P12 党内规范性文件（原文不公开），58 行/2.1KB → 282 行/19KB，用 2026-05-20 + 2026-04-22 两条中央讲话反推
+- **实际案例**：2026-06-12 cron 任务——P16 已印发但解读未发布（双轨标注法），64 行/2.1KB → 约 310 行/25KB
+- **实际案例**：2026-06-13 cron 任务——P14 山东省实施细则，66 行/2.0KB → 329 行/22KB。**新增了与"全建完后"模式并列的"最浅页深化"标准动作**：用 `urllib + HTMLParser` 抓 zytzb 静态 HTML 提取正文（详见 `references/urllib-htmlparser-js-sites.md`），2 条 2026 年中央层面真实案例 + 3 档五莲县级工作建议 + 5 条信息稿选题
 
 ### ⚠️ 第五档应对：已印发但解读未发布（2026-06-12 P16 实践沉淀）
 
@@ -552,6 +556,7 @@ sources:
 - `references/non-public-inner-party-docs.md` — **党内规范性文件原文不公开时的处理手册**（2026-06-11 沉淀）：与"未生效新法/软法"模式并列的第三种模式，含"2026 公开讲话反推"路径、5 类"信号性引文"模式、P12 实践案例
 - `references/issued-but-uninterpreted.md` — **已印发但解读未发布政策的处理手册**（2026-06-12 沉淀）：第 4 种模式，区别于"未生效""党内不公开""索引页"；适用 P16《创建命名管理办法》2026-01-08 印发版等；含"原文可用 + 解读缺失"的双轨标注法、5 类"刚印发窗口期"信号识别、案例替代来源 3 档
 - `references/neac-url-patterns.md` — **国家民委 neac.gov.cn 抓取技术手册**（2026-06-12 沉淀）：URL 模式（`/seac/xwzx/YYYYMM/NNNNNNN.shtml` + `/seac/xxgk/...`）、首页 listing 批量提取 article ID 的 python3 一行命令、policy interpretation 分页（`index_2.shtml`）的真实可用性、3 个"首抓后再 grep 链接"的反爬模式
+- `references/urllib-htmlparser-js-sites.md` — **urllib + HTMLParser 抓取 JS 渲染的中国政府站**（2026-06-13 沉淀）：当 `browser_navigate` 抓不到正文（JS 弹窗遮挡、snapshot 不可见）时，用 `urllib` + `HTMLParser` 解码静态 HTML 提取全部正文。**核心洞察**：zytzb 等"内容静态 + 样式 JS"站点，正文其实在静态 HTML 里——browser 抓不到是 snapshot 工具的局限，不是站点的限制。含完整可复制脚本、6 类适用站点判断、5 条避坑。
 
 ## 关联技能
 

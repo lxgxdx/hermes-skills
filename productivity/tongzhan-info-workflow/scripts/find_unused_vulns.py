@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+"""识别尚未被使用的高优先级漏洞（6/13 cron 用）
+
+基于双正则扫描 + 已用关键词过滤，输出剩余🟢优先富矿清单。
+
+6/12 必做：双正则扫描（兼容内联+章节格式）
+6/12 必做：识别高优先级漏洞（带 ⚠️ 标注）
+
+Usage:
+    # 1. 编辑此文件的 used_keywords_full 集合，添加当日/近3天已用关键词
+    # 2. python3 scripts/find_unused_vulns.py
+    # 3. 输出：剩余🟢优先富矿清单 + 剩余🟡非高优先级漏洞
+"""
+
+import os, re, glob
+
+policy_dir = "/home/lxgxdx/wiki/entities/"
+files = sorted(glob.glob(f"{policy_dir}/policy-*.md"))
+
+# ⚠️ 每次执行 cron 前必须更新此集合！
+# 6/01-6/12 已用关键词（所有问题类选题的关键词）
+used_keywords_full = {
+    # 6/12 已用
+    "跨团体", "重新注册", "备案管理", "重形式轻实质", "许可证", "届满重审",
+    "基层执法", "权小事多责任重", "小马拉大车", "教职人员社保", "灵活就业",
+    "权益保障", "灵活就业身份", "教职人员认定", "重准入",
+    # 6/11 已用
+    "台资性质", "立法时滞", "部际协调机制", "互嵌式社区", "考核权重",
+    "促进法软法", "信息披露", "利益冲突", "内部举报", "促进法",
+    # 6/08 已用
+    "捷克", "欧盟峰会", "民族团结进步创建", "展板代替实效", "党外干部",
+    "配而不用", "三级网络", "有名无实", "小国组团", "光彩事业",
+    "品牌保护", "置顶零追责", "台胞投资保护法", "30年",
+    # 6/04 已用
+    "民族因素认定", "扩大化",
+    # 6/03 已用
+    "台胞投资", "光彩",
+    # 6/02 已用
+    "海警执法", "法国", "跨主体信息", "平台经济", "灵活就业参保", "工商联",
+    "统战性", "经济性", "民间性",
+    # 6/01 已用
+    "民间信仰", "监管真空", "佛道教商业化", "特朗普", "冻结对台军售",
+    "加拿大军舰", "基层宗教部门",
+    # 5/29 已用
+    "网络借教敛财", "未成年人保护",
+    # 5/28 已用
+    "宗教场所消防", "武契奇",
+    # 5/24 已用
+    "郑丽文", "登陆", "一键投诚", "台北故宫",
+    # === 6/13 新增（本次 cron run 后追加）===
+    "水饺联盟", "经贸优先", "退出机制", "撤销命名", "先审后发",
+    "财务监管", "两张皮", "政策补丁", "十项措施",
+}
+
+# 高优先级漏洞（带 ⚠️ 标记的）
+all_vulns_high = []
+all_vulns_all = []
+for fpath in files:
+    fname = os.path.basename(fpath)
+    with open(fpath, encoding="utf-8") as fp:
+        content = fp.read()
+
+    # 格式 A：内联  **xx漏洞** — xx
+    matches_a = re.findall(r'\*\*([^*]+?漏洞)\*\*\s*[—\-]\s*([^\n]+)', content)
+    # 格式 B：章节 + ⚠️
+    matches_b_warn = re.findall(r'###\s*\d+\.\d+\s+([^\n]+?)\s*⚠️+', content)
+    # 格式 B：所有章节（用于补充）
+    matches_b_all = re.findall(r'###\s*\d+\.\d+\s+([^\n]+?)(?:\s*⚠️+)?\s*(?:\n|$)', content)
+
+    for title, desc in matches_a:
+        all_vulns_all.append((fname, "A", title.strip(), desc.strip()[:80]))
+    for title in matches_b_warn:
+        all_vulns_high.append((fname, "B⚠️", title.strip(), "(高优先级标注)"))
+    for title in matches_b_all:
+        all_vulns_all.append((fname, "B", title.strip(), "(章节式标注)"))
+
+print(f"=== 🟢 高优先级漏洞（带 ⚠️ 标注） ===\n")
+for fname, fmt, title, desc in all_vulns_high:
+    # 检查是否已被使用
+    is_used = any(kw in title for kw in used_keywords_full)
+    status = "❌ 已用" if is_used else "🟢 可用"
+    print(f"{status} {fname:<48} {fmt:<4} {title[:50]}")
+
+print(f"\n=== 🟡 剩余未用漏洞（节选） ===\n")
+used_via_a = set()
+for fname, fmt, title, desc in all_vulns_all:
+    is_used = any(kw in title for kw in used_keywords_full)
+    # 排除章节目录类
+    if any(skip in title for skip in ["历史脉络", "制度定位", "工作流程", "管理原则",
+                                       "政治安排", "三波演进", "三重含义",
+                                       "许可", "组织机构", "资产管理", "决策机制",
+                                       "业务范围", "总则", "案例", "工作建议",
+                                       "制度配套", "可用信息", "建议", "堵点",
+                                       "省级平台", "制度创新", "配套缺失",
+                                       "地方特殊", "典型问题", "基层执行难点",
+                                       "监督追责", "监督缺失", "多部门协调",
+                                       "执行空白", "模糊地带", "历史遗留",
+                                       "地方实施", "行政法规", "政策性",
+                                       "其他核心", "投资形式", "现实脱节",
+                                       "安全", "年度考核", "建设管理",
+                                       "人员管理", "活动管理", "法人登记",
+                                       "设立审批", "保障", "构筑",
+                                       "促进", "共同繁荣", "总则部分",
+                                       "参保范围", "待遇享受", "处罚",
+                                       "法律责任", "日常管理", "资格认定",
+                                       "决策监督", "权力运行", "完善商会",
+                                       "规范商会", "扩大党", "宗教工作",
+                                       "港澳台统战", "基层统战力量",
+                                       "政治安排与", "组织架构",
+                                       "政治安排与实职"]):
+        continue
+    if is_used:
+        continue
+    key = (fname, title)
+    if key in used_via_a:
+        continue
+    used_via_a.add(key)
+    print(f"{fname:<48} {fmt:<3} {title[:50]}")

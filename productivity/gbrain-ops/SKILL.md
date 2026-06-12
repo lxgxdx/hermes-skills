@@ -417,16 +417,54 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - `llm-wiki-build` / `tongzhan-wiki-build` → **最常见**，按上面 wiki→brain 桥接处理
 - `pve-wiki-例行检查` → 一般无新内容，跳过
 
-### Dream Cycle 执行状态（2026-05-26）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：10个 cron session，4个含实际内容（00:00/01:00/02:00-02:02）
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - Brain 页面写入：2个页面更新（pve-wiki.md、tongzhan-info-topics.md）
 - doctor：✅ health_score 90（resolver + connection warnings）
 - embed --stale：⚠️ embedding service 内网不可达（环境限制），0 chunks
 
-### Dream Cycle 执行状态（2026-06-11）
+### Dream Cycle 执行状态（2026-06-13）
 
--实体提取：7 个 cron session，6 个含实际内容；**全 cron 日，无人类对话**（连续第9 日）
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - **01:00 tongzhan-info-workflow cron打破连续6 天失败模式**（6/5+6/6+6/7+6/9+6/10失败）— `问题类选题_20260611.md`成功生成；6/8简化策略（跳过 wiki挖掘/限制浏览器/优先写 NFS）继续生效
 - **01:30 tongzhan-wiki-build P16党外干部双重管理** — 新建 entity `policy-party-outside-cadres`，raw `party-outside-cadres-summary-2026-06-11.md`
 - **02:00经验类选题 cron失败** —41消息预算耗尽，`经验类选题_20260611.md` 未生成；需类似6/8简化策略或合并到01:00
@@ -434,9 +472,28 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - doctor / embed：⏸️ **未执行**（max-tool-call限制中断）；按6/9 基线预期 health_score85 +100% coverage
 -详细记录：`references/dream-cycle-2026-06-11.md`
 
-### Dream Cycle 执行状态（2026-06-09）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，3 个含实际内容（00:00/01:00/01:30）；**全 cron 日，无人类对话**（连续第 8 日）
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - **01:00 tongzhan-info-workflow cron 出现新失败模式**（6/5+6/6+6/7+6/8+6/9 累计 5 次失败）：session 异常短（**16 条消息** vs 正常 72+），最后输出 "Good. Now I have full context. Let me check today's experience topic..." 在读 experience topic 阶段中断；NFS `问题类选题_20260609.md` **未生成**
 - **01:30 tongzhan-wiki-build P01 案例深化** — `policy-religion-regulations` 从 113→218 行（5.9→12.6KB，2.1×），是 5 个优先级页面中**唯一零案例**页面
   - 配套新建 2 个 raw 文件：李干杰 2026-04 甘肃四川调研、《深入推进我国佛教中国化五年工作规划纲要（2023-2027）》
@@ -450,9 +507,28 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - 关键认知：01:00 cron 出现"early-exit"新失败模式（6/10 必须验证 cron 触发链路）；drift check 模式 `wc -l` 对比 wiki vs brain；2 个 person 页都是 cron 案例引用触发
 - 详细记录：`references/dream-cycle-2026-06-09.md`
 
-### Dream Cycle 执行状态（2026-06-08）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，3 个含实际内容；**全 cron 日，无人类对话**（连续第 7 日）
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - **01:00 tongzhan-info-workflow cron 结束连续 3 日失败模式**（6/5+6/6+6/7）— 简化策略（跳过 wiki 挖掘、限制浏览器操作、优先写 NFS）奏效，今日成功生成 5 个选题（2 热点 + 3 制度漏洞），**首次启用"类型 B 制度漏洞"分类**
 - **01:30 tongzhan-wiki-build P05 案例深化 + comparisons/ 首发** — `policy-taiwan-investment` 17.7KB→21.3KB（+案例3泰州），新建 `problem-case-taiwan-qualification-barriers`（comparisons/ 第一个页面，11.3KB）
 - wiki→brain 桥接：2 个页面（1 改写 + 1 新建），**新增 YAML `[[slug]]` 陷阱发现**
@@ -466,9 +542,28 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
   - outline/index/log 文件不应 import（结构性元数据）
 - 详细记录：`references/dream-cycle-2026-06-08.md`
 
-### Dream Cycle 执行状态（2026-06-07）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（与 6/2-6/6 连续 6 日一致）
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - **01:00 tongzhan-info-workflow cron 连续三日失败**（6/5、6/6、6/7）— 失败模式稳定可预测，但候选选题质量在提升（已能拆"宏观/子主题"避免与历史重复）
 - **01:30 tongzhan-wiki-build 突破"用例搜索瓶颈"** — 本次 P15 深化未卡在用例搜索阶段，优先写"问题+原文链接+核心案例"骨架（P15 中国光彩事业促进会章程 65→295 行 / 2.2→19.9KB）
 - wiki→brain 桥接：1 个更新实体（`entities/policy-guangcai/page`）+ 1 个新 raw + 1 个更新 project 页
@@ -478,18 +573,56 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - Brain 状态：pages 104→108, chunks 203→217, embedded 203→217, project 17→17, entity 16→16, tags 109→110
 - 详细记录：`references/dream-cycle-2026-06-07.md`
 
-### Dream Cycle 执行状态（2026-06-02）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，4 个含实际内容；**全 cron 日，无人类对话**
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - Wiki→Brain 桥接：1 个新实体（policy-religious-venue）
 - doctor：✅ health_score 85（resolver/pgvector/RLS warnings — doctor 误报，非真实问题）
 - embed --stale：0 chunks embedded（100% coverage — 正常）
 - Brain 状态：pages 82→83, chunks 156→158, embedded 156→158, entities 3→4
 - 详细记录：`references/dream-cycle-2026-06-02.md`
 
-### Dream Cycle 执行状态（2026-06-05）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，3 个含实际内容（00:00/01:00/01:30）；**全 cron 日，无人类对话**
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - **01:00 tongzhan-info-workflow cron 失败**：session 在 `browser_navigate` 抓取"五眼联盟"原文时中断，NFS `问题类选题_20260605.md` 未生成；候选 5 选题已在 session 留底
 - **01:30 tongzhan-wiki-build 成功**：新建 P17 `policy-minzu-tuanjie-promotion-law.md`（《中华人民共和国民族团结进步促进法》，15,266 B / 247 行）
 - Wiki→Brain 桥接：1 个新实体（`policy-minzu-tuanjie-promotion-law`，3 chunks）
@@ -500,9 +633,28 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - 关键认知：cron prompt 格式变化（6/4 → 6/5 不再显式 `"skill-name" skill` 标记，需用关键词匹配 fallback）；01:00 cron 中断模式待解（候选选题必须先写 NFS 文件再补真实事件触发）
 - 详细记录：`references/dream-cycle-2026-06-05.md`
 
-### Dream Cycle 执行状态（2026-06-04）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，3 个含实际内容（00:00/01:00/01:30）；**全 cron 日，无人类对话**
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - Wiki→Brain 桥接：1 个新实体（`policy-taiwan-investment`，台湾同胞投资保护法 1994/2016/2019，3 chunks）
 - **选题库→Project 页面更新**（新增步骤）：`tongzhan-info-topics` 项目页追加 5 个 6/4 选题速览
 - doctor：✅ health_score 85（同 6/2/6/3 稳定基线，resolver/pgvector/RLS warnings 是已知误报）
@@ -511,9 +663,28 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - 关键认知：cron sub-task 提取（regex from first user message）、NFS 选题库→brain project 页映射、0 消息 02:00 sessions 是守卫不是失败
 - 详细记录：`references/dream-cycle-2026-06-04.md`
 
-### Dream Cycle 执行状态（2026-06-06）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，3 个含实际内容（00:00/01:00/01:30 + 02:00 llm-wiki-build）；**全 cron 日，无人类对话**
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - **01:00 tongzhan-info-workflow cron 连续两日失败**（6/5、6/6 同模式）：72 条消息耗尽在 wiki 素材挖掘 + 观察者网新闻抓取阶段，`browser_navigate` 抓取"五眼联盟"原文时中断；NFS `问题类选题_20260606.md` **未生成**
 - **01:30 tongzhan-wiki-build P18 未完成**：183 条消息，能识别政策（中国共产党政治协商工作条例 7章31条）、抓取原文、分析 5 类问题，但 **wiki 文件写入阶段中断**于"用例搜索"步骤
 - 02:00 cron slot 产生 4 个 session（3 个 0 消息守卫 + 1 个 llm-wiki-build 12 消息检查），全部在同一秒（02:00:12）触发
@@ -583,9 +754,28 @@ cp ~/wiki/entities/<slug>.md /tmp/gbrain-dream-$(date +%F)/entities/<slug>/page.
 - 1 个 12 消息 session 是 `llm-wiki-build` 在检查是否有新 wiki 页
 - dream cycle 只需看哪个 session 有内容（`message_count > 0`）即可
 
-### Dream Cycle 执行状态（2026-06-03）
+### Dream Cycle 执行状态（2026-06-13）
 
-- 实体提取：7 个 cron session，4 个含实际内容；**全 cron 日，无人类对话**
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 53 msgs / 01:30 tongzhan-wiki-build 84 msgs）；**全 cron 日，无人类对话**（连续第 11 日）
+- **01:00 tongzhan-info-workflow cron 连续 3 日成功**（6/11 破冰 → 6/12 稳定 → 6/13 富矿消耗）— 6/13 首次实现 **"跨日富矿消耗链"**：6/12 cron 挖出 21 个标注漏洞（用了 5 个🟢优先富矿，剩余 76+）→ 6/13 cron 直接用 6/12 剩余🟢优先富矿（4 制度漏洞选题），避免一日耗尽
+- **01:30 tongzhan-wiki-build P17 山东省实施细则深化** — 地方文件**首次**纳入"最浅页"路径（71→340 行/22KB，10× 字节/4.8× 行数，5 类执行层面问题全覆盖+2 条 2026 中央真实案例+4 量化指标缺失点）
+  - 地方文件深化需注意：原文未在省政府官网单独公开，核心条款散见于省/市/县三级党代会议程、省委统战部年度工作要点
+- wiki→brain 桥接：1 个新深化实体（`policy-shandong-tongzhan`，71→340 行）+ 1 个 project 页更新（追加 6/13 段）
+- **delete-then-reimport 第 4 次实战** — 实体页 + 项目页同步 delete + reimport（6/13 shandong entity + tongzhan-info-topics project）；模式完全稳定
+- doctor：✅ health_score 85（与 6/2-6/12 稳定基线一致）
+- embed --stale：116/116 pages, 0 chunks embedded（100% coverage — 正常）
+- Brain 状态：pages 115→116 (+1), chunks 240→246 (+6), embedded 240→246 (+6), tags 123→125 (+2), entity 17→17 (P17 深化非新增), project 17→17
+- 关键认知：
+  - **跨日富矿消耗链**：6/12 cron 挖富矿 → 6/13 cron 选富矿，避免一日耗尽；下次 cron 启动时直接读上次留底候选
+  - **"shallowest page" 路径扩展到地方文件** — 4 次实战覆盖中央法规/中央文件/地方文件 3 种类型
+  - **3-day success streak 才算稳定基线** — 6/11 单次成功 + 6/12 2-day + 6/13 3-day，6/14+ 继续监控
+  - **delete-then-reimport 实体+项目同步模式** — 4 次实战确认无问题，可作为 wiki 重建标准 SOP
+  - **02:00 cron slot 仍稳定产生 4 个 0 消息 session** — 守卫/占位模式继续；不视为失败
+- 详细记录：`references/dream-cycle-2026-06-13.md`
+
+### Dream Cycle 执行状态（2026-06-12）
+
+- 实体提取：7 个 cron session，3 个含实际内容（00:00 daily-work-log / 01:00 tongzhan-info-workflow 72 msgs / 01:30 tongzhan-wiki-build 92 msgs）；**全 cron 日，无人类对话**（连续第 10 日）
 - Wiki→Brain 桥接：**10 个新政策实体**（llm-wiki-build 01:30 批量产出：26条惠台措施、商会改革、山东省统战细则、宗教教职人员、党外干部双重管理、新阶层统战、民族团结、港澳台社保、光彩事业、工商联章程）
 - **YAML 修复**：1 个文件 `policy-26-measures.md` 因 `title: "26条"惠台措施` 嵌套引号被 import 静默跳过 → 手动修 frontmatter + 单独 reimport 成功
 - 桥接脚本幂等性验证：修复后再次运行显示 14/14 "already in gbrain"
@@ -1162,6 +1352,8 @@ PGPASSWORD=<password> psql -h <host> -p <port> -U <user> -d <database> -c "SELEC
 | **"shallowest page" 重建路径稳定（2026-06-09 → 6/11 → 6/12）**| tongzhan-wiki-build cron 每周 2 步"最浅页重建"：找"行数最少+字节最小+0 真实案例"的优先级页面优先深化 | 详见 `references/dream-cycle-2026-06-12.md`（3 次路径对比）|
 | **01:00 tongzhan-info-workflow 2-day success streak（2026-06-12 确认）**| 6/11 破冰 → 6/12 稳定，但 6/13+ 必须继续监控（单次成功不能确认修复）| 6/8 简化策略（跳 wiki 挖掘/限浏览器/优先写 NFS）连续 2 日奏效 |
 | **Dream Cycle 2026-06-12 详细记录** | `references/dream-cycle-2026-06-12.md`（10th 连续全 cron 日 + P16 重建 + delete-then-reimport 第 3 次实战 + 01:00 cron 2-day success）| 新增 |
+| **Dream Cycle 2026-06-13 详细记录** | `references/dream-cycle-2026-06-13.md`（11th 连续全 cron 日 + P17 山东省地方文件首次纳入"最浅页"路径 + delete-then-reimport 第 4 次实战 + 01:00 cron 3-day success + 跨日富矿消耗链首次实现）| 新增 |
+- **Dream Cycle 2026-06-13 详细记录** | `references/dream-cycle-2026-06-13.md`（11th 连续全 cron 日 + P17 山东省地方文件首次纳入"最浅页"路径 + delete-then-reimport 第 4 次实战 + 01:00 cron 3-day success + 跨日富矿消耗链首次实现）| 新增 |
 | **SQLite `LIMIT`字符串拼接陷阱（2026-06-11）**| Python拼接 `"LIMIT" + "1"`产生 `LIMIT1`（无效 SQL，无空格）；同样 `"ORDER BY id " + "LIMIT1"` 也产生 `LIMIT1`（空格被吃掉）| **唯一可靠写法**：`"ORDER BY id " + "LIMIT" + " " + "1"`（空格必须独立字符串）；或用完整字面量 `"ORDER BY id LIMIT1"` |
 | **write_file工具空白规范化（2026-06-11）**| `write_file` 把连续多空格压成单空格，导致 Python嵌套缩进失效 | Python源码用 tab缩进（`\t`）而非空格；heredoc 在 cron 中只能写 tab缩进的 Python |
 |01:00 cron连续失败6 天后6/11 首胜（6/5+6/6+6/7+6/9+6/10失败）|6/8简化策略（跳过 wiki挖掘/限制浏览器/优先写 NFS）继续生效；连续单次成功不能确认修复 |6/12+继续监控至少2-3 天，确认稳定基线 |
