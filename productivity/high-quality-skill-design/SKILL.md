@@ -123,15 +123,70 @@ look good?).
 
 ### 7. Anti-Cliché Principles
 
-For skills involving creative/design output, add a section that tells the
-Agent what NOT to do — the common AI-generated patterns to avoid:
+For skills involving creative/design output, add a section that tells
+the Agent what NOT to do — the common AI-generated patterns to avoid:
 
 ```markdown
-### No AI-Generated Clichés
+## No AI-Generated Clichés
 
 - **Bad pattern 1** — why it's bad
 - **Bad pattern 2** — why it's bad
 ```
+
+### 8. Cross-Skill Boundary Discipline (2026-06-14 established)
+
+A skill must declare what it is **NOT**. When a user operates multiple
+domain skills (e.g. 信息稿 + PPT + Wiki + 日报), each skill has its own
+persona, scope, and iron rules. **Do not cross-pollinate.**
+
+**Real incident (2026-06-13 飞书 session, lxgxdx)**: Microsoft SkillOpt
+was being evaluated. Its `LLM-miner` mode dug "task patterns" from
+session history and produced two rule sets:
+
+- Round 1: "信息稿格式" rules — conflicted with the user's "创意活力"
+  preference for 信息稿
+- Round 2: **"PPT 规则"** — the user explicitly said:
+  > "**PPT 规则跟统战信息稿 skill 不相关**"
+
+The user killed SkillOpt not because it was bad tech, but because **it
+proposed rules that violated the boundary between two of his domain
+skills**. The 信息稿 skill is for writing government information
+reports; the PPT skill is for designing training presentations. Each
+has its own rules. A skill output that mixes them is unusable.
+
+**Iron rule (apply to every domain skill you write)**:
+
+> **One skill = one domain = one set of rules. If your skill would
+> import rules from another skill's domain, you are crossing a
+> boundary — refuse or rename.**
+
+**Where to add this in your SKILL.md**:
+
+In the Scope section, add a third bullet category:
+
+```markdown
+✅ **Applicable**: [this skill's domain]
+❌ **Not applicable**: [other skills' domains, explicitly named]
+⚠️ **Boundary**: [if X looks adjacent, defer to skill-Y]
+```
+
+**Why this matters for this user specifically** (lxgxdx):
+- Operates 5+ skills daily: 信息稿 / PPT / Wiki / 日报 / cron
+- Each skill has its own iron rules (e.g. 信息稿 = "五莲县自己的",
+  PPT = "创意活力+不要死板")
+- **He notices** when rules from one skill leak into another
+- A 19KB SKILL.md with 200+ rules is *worse* than a focused 8KB skill
+  if it forces the Agent to apply the wrong rules in the wrong context
+
+**Anti-pattern**: "general-purpose" or "domain-agnostic" skills. The
+moment you write "适用于任何需要 X 的场景" you have crossed a
+boundary. Skills are sharp tools; generality is rust.
+
+**Companion signal — preference-embedding**: the same user-correction
+that exposed this boundary issue also surfaces the user's general
+preference for **focused, single-domain skills**. When a new skill is
+proposed that overlaps with two existing skills, the right answer is
+to **split it into two skills**, not to merge.
 
 ---
 

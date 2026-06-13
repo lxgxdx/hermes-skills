@@ -1,6 +1,6 @@
 # 跨日复现的 cron 任务已知 bug & 信号清单
 
-> 2026-06-04 首次整理，2026-06-05 大幅扩充（新增 §5b 成功幻觉 / §5c 前 N 步已规划但未落盘 / §10 dream cycle 0 净增正常信号）。2026-06-06 新增 §5d cron 整段 SILENT 占位符（第三种截断模式）+ §11 01:00 问题类 cron 连续 2 日同类失败。2026-06-07 新增 §11b asst last "半截过渡句" 第四种截断模式。2026-06-08 新增 §11c "完整结构化规划 + 0 write_file" 第五种截断模式 + §12 6/8 cron 健康度破冰（01:00 选题 4 日失败链条终结）。2026-06-11 新增 §11d "工具配额用尽 + 0 write_file" 第六种截断模式（02:00 双 cron 同期失败）+ §13 6/11 验证 6/8 破冰非结构性（01:00 破冰 + 02:00 同日同根因失败，6/9+6/10+6/11 三连败）。**2026-06-12 新增**：§5e `[SILENT` 尾缀变体（与 §5d 字面精确匹配的区分）/ §14 漏报自检反馈循环（cron 跨任务互相验证产出）/ §15 dream cycle 12× 差距时强制走 delete-then-reimport / §16 PVE Wiki cron 时段迁移（06:00→02:00）。每日 cron session 中都会重复出现这些 bug，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
+> 2026-06-04 首次整理，2026-06-05 大幅扩充（新增 §5b 成功幻觉 / §5c 前 N 步已规划但未落盘 / §10 dream cycle 0 净增正常信号）。2026-06-06 新增 §5d cron 整段 SILENT 占位符（第三种截断模式）+ §11 01:00 问题类 cron 连续 2 日同类失败。2026-06-07 新增 §11b asst last "半截过渡句" 第四种截断模式。2026-06-08 新增 §11c "完整结构化规划 + 0 write_file" 第五种截断模式 + §12 6/8 cron 健康度破冰（01:00 选题 4 日失败链条终结）。2026-06-11 新增 §11d "工具配额用尽 + 0 write_file" 第六种截断模式（02:00 双 cron 同期失败）+ §13 6/11 验证 6/8 破冰非结构性（01:00 破冰 + 02:00 同日同根因失败，6/9+6/10+6/11 三连败）。**2026-06-12 新增**：§5e `[SILENT` 尾缀变体（与 §5d 字面精确匹配的区分）/ §14 漏报自检反馈循环（cron 跨任务互相验证产出）/ §15 dream cycle 12× 差距时强制走 delete-then-reimport / §16 PVE Wiki cron 时段迁移（06:00→02:00）。**2026-06-13 新增**：§17 `api_server` source 甄别（28 个 SkillOpt LLM-miner 子任务同期出现）/ §18 manual session "deliver-only" 模式（cron 已完成后重看场景）/ §19 pre-cron 预生成内容（manual session 提前跑次日 cron 流程）。每日 cron session 中都会重复出现这些 bug，必须在「未完成 / 待跟进」中显式标注（甚至跨日持续 follow-up），否则会被静默丢失。
 
 ## 🔴 高优先级（每日重复出现的 P0 信号）
 
@@ -406,6 +406,60 @@
 
 ## 跨日 follow-up 模板
 
+> **2026-06-13 续**：新增 §17/§18/§19 对应 follow-up 标签
+
+### 17. `api_server` source 甄别（2026-06-13 新发现）
+
+- **症状**：query state.db 时出现 `source='api_server'` 的 session，**这些不是用户交互也不是标准 cron**，而是 Hermes gateway 转发过来的子任务 session
+- **特征**：
+  - `id` 格式：`api-<hex16>`（不是 `cron_<hex>_<date>` 也不是 `YYYYMMDD_HHMMSS_<hex>`）
+  - `title=None`（标准 cron 通常有 `<skill-name>` 标题）
+  - msgs 数量集中在 2-8 之间（短任务），偶尔 40-120（中等训练/聚合任务）
+  - `asst last` 极短（<20 字符：`]`、`''`、`"` 等），本质是 JSON 输出 marker
+- **首次发现**：2026-06-13 SkillOpt 评估期间累计 28 个 api_server session（`api-612eeb...` → `api-1640b9...`），全部为 SkillOpt LLM-miner 子任务
+- **甄别方法**：检查首条 user 消息关键词——含 `"mining a user's past AI-assistant sessions"` / `"You are completing a recurring task"` / `"Apply the skill and memory rules"` 等 skill 注入模板 → 判定为 LLM-miner / 模拟 cron 子任务
+- **应对**：
+  1. **首行标注** `N api_server` session 数量（在 0 飞书/微信/TG/cli 之外），让回看者一眼区分
+  2. **「完成的工作」**单设 "API Server" 子块，**一句话概括**（如"28 个 SkillOpt LLM-miner 子任务，全部为 SkillOpt 训练用 session，与主流程无功能交集"），**不要逐个分析**（浪费 context）
+  3. **「未完成」**标"N 个 api_server session 沉淀 state.db，待用户决定清理策略"——避免无声累积
+  4. **不要被大 msgs 数量误导**：api-79eee 120 msgs、api-1640 46 msgs 看着像大任务，实际是 LLM-miner 在循环生成 task 候选，不要把它们当成"额外 cron 任务"日报化
+- **真实案例 6/13**：1 飞书 + 9 cron + **28 api_server** + 0 微信/TG/cli = 38 session；只日报飞书 1 + cron 9 即覆盖全部用户工作，api_server 28 个在「完成的工作」末单设一段
+
+### 18. Manual session "deliver-only" 模式（2026-06-13 新观察）
+
+- **症状**：tongzhan-info-workflow skill 文档 `2026-06-13-manual-session-deliver-only.md` 在 6/13 09:03 由 cron 写入，描述"manual session 在 cron 已自动完成后打开，应进入 deliver-only 模式而不是 full-run 模式"
+- **触发条件**：manual session 打开时间在 cron 已成功完成后（典型时间窗 09:00-22:00）；用户查询/重看飞书推送/看完文件后追问
+- **deliver-only 模式行为**：
+  1. ✅ 第一步 `ls /mnt/nfs/.../选题库/问题类选题_$(date +%Y%m%d).md`
+  2. ✅ 文件存在 + size > 30KB → deliver-only 模式
+  3. ✅ 读取已有文件 + 浓缩汇报
+  4. ❌ 不重新扫描 Wiki、不重新抓新闻、不重新生成选题
+- **首次实测**：6/13 08:59 manual session 打开（`20260613_072552_f41a9795` 飞书 session 是 SkillOpt 评估主线；6/13 09:00+ api-79eee/api-1640 是 deliver-only 模式），agent 一开始走 full-run 浪费 token，纠正后改 deliver-only
+- **daily log 应对**：
+  1. **「重要决定」或「未完成」**提一句"manual session deliver-only 模式触发"，**让日报读者知道该 session 节省了大量 token**
+  2. **不日报化**为"新工作"——是 cron 模式的优化实践，不是新增产出
+  3. **当 api_server 表现为"读已存在文件 + 浓缩汇报 + 不重跑"**，识别为 deliver-only 模式
+- **真实案例 6/13**：api-79eee (120 msgs) 实际跑的就是 6/14 问题类 cron 的 deliver-only 演练（见 §19）
+
+### 19. Pre-cron 预生成内容（2026-06-13 新发现）
+
+- **症状**：api_server 类型的模拟 cron session 可能在当日 09:00 左右**提前生成次日 cron 预期产出**（如 `问题类选题_20260614.md` 在 6/13 09:06 实际写入 21KB），最后一条 asst 文本显示 "06/14 09:06 (manual session)"，但**文件 mtime 实际是 6/13**。这是 manual session 跑 deliver-only + skill 演练的产物，**不是次日 cron 真跑**
+- **识别三要素**：①文件 mtime 在「昨天」窗口内 ②asst last 提到"次日日期" ③首条 user 是 "tongzhan-info-workflow" skill 模板
+- **真实案例 6/13**：
+  - `api-79eee2698bc20fa5` (120 msgs) 在 6/13 16:58 CST 跑"6/14 问题类 cron 演练"
+  - 实际生成 `/mnt/nfs/2026年统战工作/8.信息工作/选题库/问题类选题_20260614.md` 21,121 字节（mtime 6/13 09:06）
+  - asst last 提到"6/14 09:06 (manual session)"
+- **应对**：
+  1. **「生成的文件」必须列该预生成文件**（stat 验证存在 + 大小），不要漏
+  2. **「未完成」标"待 6/14 01:00 真正 cron 跑时是否覆盖"** —— 真正 cron 可能直接读已有文件当 base 但覆盖核心 5 选题，也可能视为已完成跳过
+  3. **「重要决定」不日报化**该预生成行为（不是真实 cron 决策，是 agent 提前演练），但要在文件列表注明 `(预生成 by manual session 09:06)`
+- **跨日 follow-up**：
+  - 6/14 01:00 cron 真跑后观察：是覆盖了 pre-generated 5 选题？还是视为已完成跳过？
+  - 如果 cron 跳过预生成内容 → pre-cron 演练成为 cron 节省 token 的有效机制
+  - 如果 cron 覆盖预生成内容 → 预生成浪费 token，应在 skill 模板里禁用
+
+## 跨日 follow-up 模板
+
 每日 daily log 中如果检测到以上任一 P0 信号，必须用以下格式突出显示：
 
 ```markdown
@@ -427,6 +481,12 @@
 - ✅ **漏报自检反馈循环**（2026-06-12 新增）— 某 cron 任务的异常检测触发另一 cron 任务深度复核（如 6/12 01:00 cron deep-read 6/11 4 文件发现 21 漏报），详见 §14
 - 🔄 **dream cycle 12× 差距时强制走 delete-then-reimport**（2026-06-12 新增）— 脑库 stats 与 wiki 文件 size 12× 差距时普通 import 静默跳过，必须 delete-then-reimport（详见 §15）
 - ⏰ **PVE Wiki cron 时段迁移 06:00 → 02:00**（2026-06-12 新增）— 待 6/13+ 观察是否稳定（详见 §16）
+- 🔧 **api_server N session 沉淀**（2026-06-13 新增）— N 个 api_server session（如 SkillOpt LLM-miner 子任务）持续累积在 state.db，待用户决定清理策略（详见 §17）
+- 📦 **Manual session "deliver-only" 模式**（2026-06-13 新增）— manual session 在 cron 已完成后重看应进入 deliver-only 模式，不重跑；详见 §18
+- 👁️ **Pre-cron 预生成内容**（2026-06-13 新增）— manual session 提前跑次日 cron 流程生成文件（如 `问题类选题_YYYY-MM-DD+1.md`），待次日真 cron 是否覆盖（详见 §19）
+- ✅ **Negative stat 验证（清理型任务）**（2026-06-13 新增）— 清理型任务（如 SkillOpt 5 路径清理）stat 验证"文件不存在 = 成功"也是 stat 验证的一种形态
+- 🧹 **清理型任务完成**（2026-06-13 新增）— 6/13 SkillOpt 适配砍掉 + 5 路径全删（negative stat 验证通过）— SkillOpt 不适配特定领域 skill 场景
+- 🆕 **P14 山东实施细则 11 倍重建**（2026-06-13 新增）— Wiki 政策库建设投入产出比最高形态（66→329 行 / 2.0→22KB），被 6/14 cron 立即利用为"24 小时新富矿"
 ```
 
 其中 XX 小时是"自首次发现"累计时长；连续多日要在 daily log 顶部用 `⚠️ P0 跨日持续` 标注。

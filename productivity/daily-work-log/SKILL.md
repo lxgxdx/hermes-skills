@@ -46,6 +46,7 @@ Core philosophy: **Every day is a project page. Consistency is memory.**
 | Telegram | ✅ | `telegram` |
 | CLI | ✅ | `cli` |
 | Cron | ✅（自动任务） | `cron` |
+| API Server | ⚠️（需甄别） | `api_server` |
 
 ---
 
@@ -278,6 +279,11 @@ cp file.md ~/.hermes/memories/daily/YYYY-MM-DD.md
 - [ ] **【新】标注 dream cycle 12× 差距时 delete-then-reimport（§15，2026-06-12 新增）** —— 脑库 stats 与 wiki 文件 size 差距 ≥ 10× 时普通 import 静默跳过，必须走 delete-then-reimport；daily log「生成的文件」块需附"脑库同步状态"（chunks +N / tags +N）
 - [ ] **【新】标注 PVE Wiki cron 时段迁移（§16，2026-06-12 新增）** —— 6/9-6/11 PVE Wiki 在 06:00 跑，6/12 移到 02:00，需在「未完成」记录"待 6/13+ 观察是否稳定"
 - [ ] 告知用户 slug 名称
+- [ ] **【新】首行标注 `api_server` session 数量**（6/13 28 session 同期出现）—— 在 0 飞书/微信/TG/cli 之外加 `N api_server`，让回看者一眼区分
+- [ ] **【新】识别 pre-cron 预生成内容**（6/13 api-79eee 09:00 生成 `问题类选题_20260614.md` 21KB）—— 「生成的文件」必须 stat 验证存在 + 「未完成」标"待次日真 cron 是否覆盖"
+- [ ] **【新】识别 manual session deliver-only 模式**（6/13 09:03 新文档 `2026-06-13-manual-session-deliver-only.md`）—— 在「重要决定」或「未完成」提一句"manual session deliver-only 模式触发，节省 token"
+- [ ] **【新】清理型任务的 negative stat 验证**（6/13 SkillOpt 5 路径清理）—— 文件不存在 = 成功，也是 stat 验证的一种形态
+- [ ] **【新】api_server session 单设 API Server 子块**（6/13 28 个 LLM-miner 子任务）—— 一句话概括即可，不逐个分析
 
 ## ⚠️ Context 控制（cron 环境必修）
 
@@ -329,6 +335,42 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 - **会话总数行注明"0 飞书/微信/TG/cli"**：方便回看时一眼区分人工日 / 自动日
 - **"完成的工作"按 cron session 时间顺序列**，不分类（没有"飞书"、"cron" 分组的必要，因为只有 cron）
 - **"未完成 / 待跟进"要包含跨 session 的横切观察**（如 dream cycle 报告的 14 vs llm-wiki-build 实际的 1 之类的口径不一致），这是全 cron 日相比人工日更值得日报化的地方
+
+**⚠️ `api_server` source 甄别（2026-06-13 实测，28 session 同期出现）**：
+
+- **现象**：query state.db 时可能出现 `source='api_server'` 的 session，**这些不是用户交互也不是标准 cron**，而是 Hermes gateway 转发过来的子任务 session。典型特征：
+  - `id` 格式：`api-<hex16>`（不是 `cron_<hex>_<date>` 也不是 `YYYYMMDD_HHMMSS_<hex>`）
+  - `title=None`（标准 cron 通常有 `<skill-name>` 标题）
+  - msgs 数量集中在 2-8 之间（短任务），偶尔 40-120（中等训练/聚合任务）
+  - `asst last` 极短（<20 字符：`]`、`''`、`"` 等），本质是 JSON 输出 marker
+- **首次发现**：2026-06-13 SkillOpt 评估期间累计 28 个 api_server session（api-612eeb... → api-1640b9...），全部为 SkillOpt LLM-miner 子任务（评估"是否能挖出统战信息/PPT/HA 等领域的可复用 task"），与主流程无功能交集
+- **甄别方法**：检查首条 user 消息关键词——含 `"mining a user's past AI-assistant sessions"` / `"You are completing a recurring task"` / `"Apply the skill and memory rules"` 等 skill 注入模板 → 判定为 LLM-miner / 模拟 cron 子任务
+- **处理策略**：
+  1. **首行标注 `0 微信/Telegram/CLI`** 之外还要标注 `N api_server` —— 让回看者一眼区分
+  2. **在「完成的工作」单设 "API Server" 子块**，一句话概括（如"28 个 SkillOpt LLM-miner 子任务，全部为 SkillOpt 训练用 session，与主流程无功能交集"），**不要逐个分析**（浪费 context）
+  3. **「未完成」标"N 个 api_server session 沉淀 state.db，待用户决定清理策略"** —— 避免无声累积
+- **不要被大 msgs 数量误导**：api-79eee 120 msgs、api-1640 46 msgs 看着像大任务，实际是 LLM-miner 在循环生成 task 候选，不要把它们当成"额外 cron 任务" 日报化
+- **真实案例 6/13**：1 飞书 + 9 cron + **28 api_server** + 0 微信/TG/cli = 38 session；只日报飞书 1 + cron 9 即覆盖全部用户工作，api_server 28 个在「完成的工作」末单设一段
+
+**⚠️ "Pre-cron 预生成"内容识别（2026-06-13 实测）**：
+
+- **现象**：api_server 类型的模拟 cron session 可能在当日 09:00 左右**提前生成次日 cron 预期产出**（如 `问题类选题_20260614.md` 在 6/13 09:06 实际写入 21KB），最后一条 asst 文本显示 "06/14 09:06 (manual session)"，但**文件 mtime 实际是 6/13**。这是 manual session 跑 deliver-only 模式的产物，**不是次日 cron 真跑**
+- **识别三要素**：①文件 mtime 在「昨天」窗口内 ②asst last 提到"次日日期" ③首条 user 是 "tongzhan-info-workflow" skill 模板
+- **处理策略**：
+  1. **「生成的文件」必须列该预生成文件**（stat 验证存在 + 大小），不要漏
+  2. **「未完成」标"待 6/14 01:00 真正 cron 跑时是否覆盖"** —— 真正 cron 可能直接读已有文件当 base 但覆盖核心 5 选题，也可能视为已完成跳过
+  3. **「重要决定」不日报化**该预生成行为（不是真实 cron 决策，是 agent 提前演练），但要在文件列表注明 `(预生成 by manual session 09:06)`
+
+**⚠️ "Manual session deliver-only" 模式识别（2026-06-13 09:03 新文档）**：
+
+- **现象**：tongzhan-info-workflow skill 文档 `2026-06-13-manual-session-deliver-only.md` 在 6/13 09:03 由 cron 写入，描述"manual session 在 cron 已自动完成后打开，应进入 deliver-only 模式而不是 full-run 模式"
+- **触发条件**：manual session 打开时间在 cron 已成功完成后（典型时间窗 09:00-22:00）；用户查询/重看飞书推送/看完文件后追问
+- **deliver-only 模式行为**：
+  1. ✅ 第一步 `ls /mnt/nfs/.../选题库/问题类选题_$(date +%Y%m%d).md`
+  2. ✅ 文件存在 + size > 30KB → deliver-only 模式
+  3. ✅ 读取已有文件 + 浓缩汇报
+  4. ❌ 不重新扫描 Wiki、不重新抓新闻、不重新生成选题
+- **日报处理**：当某 api_server / manual session 表现为"读已存在文件 + 浓缩汇报 + 不重跑"，在「重要决定」或「未完成」提一句"manual session deliver-only 模式触发"，**让日报读者知道该 session 节省了大量 token**
 
 **⚠️ "混合日 lite" 处理（1 飞书 + 11 cron + 0 微信/TG/cli）（2026-06-06 实测）**：
 
@@ -417,6 +459,15 @@ python3 -c "...SELECT id, source, started_at, message_count, title..."
 - **现象**：agent 写出长且结构化的"完成报告"作为最后一条 asst（含详细文件路径 + 大小 + 实施步骤），但**实际文件未落地**。和"普通截断"（asst last = 0）的关键区别：成功幻觉 = asst last **长且结构化**
 - **首次案例**：2026-06-05 02:00 PVE Wiki cron（`0abf80bf4d`）汇报"已创建 4 个核心页面"，但 `~/wiki/concepts/` 下 4 文件均不存在，GBrain 也搜不到
 - **2026-06-12 验证 stat 协议全过**：9 个 cron session 汇报的关键文件全部 stat 验证通过——`policy-minzu-tuanjie.md` 25,620 字节 / 321 行与 cron 报告"321行/25KB" **byte 级别一致**；`问题类选题_20260612.md` 40,564 字节、`经验类选题_20260612.md` 51,847 字节、PVE Wiki 4 文件 2.8-3.5KB、备份 3.9G、USER.md v10 21,496B 全部 ✓
+- **2026-06-13 验证 stat 协议再全过 + 升级**：6/13 11 个 cron 汇报文件全部 stat 验证通过；新增了"**清理型任务**"的 stat 验证：feishu session 报"5 处 SkillOpt 清理全删干净"，stat 检查 5 个路径全部 `ls: No such file` 即确认成功。这种 **"negative stat"**（文件不存在 = 成功）也是 stat 验证的一种形态
+  - `问题类选题_20260613.md` 43,430B / cron 报告 43.4KB → ✓
+  - `经验类选题_20260613.md` 84,775B / cron 报告 84.8KB → ✓
+  - `policy-shandong-tongzhan.md` 22,178B / cron 报告 22KB → ✓
+  - `shandong-implementation-deepening-2026-06-13.md` 7,417B / cron 报告 7.4KB → ✓
+  - PVE Wiki 4 文件 3,491-3,845B / cron 报告 3.4-3.8KB → ✓
+  - 备份 6/13 `hermes_backup_20260613_030157.tar.gz` 4,188,022,272B (4.5G 原始 / 3.9G 压缩) → ✓
+  - USER.md v11 24,952B / cron 报告 24,952B / 356 行 → ✓
+  - SkillOpt 清理 5 路径全部 stat 不存在 → ✓（negative stat 验证）
 - **必做的 3 步验证**（每个 cron session 汇报的关键文件都要做）：
   1. **filesystem stat**：`ls -la <path> 2>&1` 看文件存在 + 大小 > 1KB
   2. **GBrain 跨源验证**：`gbrain search "<文件核心实词>"` 看是否有相关 chunk
